@@ -2,10 +2,30 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Demo of cloudflare auth</title>
+  <title>Demo of cloudflare + Github oauth</title>
 </head>
 <body>
 This is a demo of cloudflare auth.
-<a href="/static/hello.html">Hello sunshine</a>.
+<ol>
+  <lh>Safe</lh>
+  <li><a href="/static/safe">Static</a></li>
+  <li><a href="/safe">Dynamic</a></li>
+</ol>
+<ol>
+  <lh>Unsafe</lh>
+  <li><a href="/static/unsafe">Static</a></li>
+  <li><a href="/unsafe">Dynamic</a></li>
+</ol>
+<ol>
+  <lh>login/logout</lh>
+  <li><a href="/login">login</a></li>
+  <li><a href="/logout">logout</a></li>
+</ol>
+
+
+/fromGithub is the last endpoint. make the endpoint that receives the first callback from github. The /fromGithub is not visible for the outside world.
+
+The fromGithub then gets the accesstoken, and then it gets the user info, and then it creates a cookie. and then it saves the cookie in the kv. And then it sends a response to the user with the cookie.
+
 </body>
 </html>
