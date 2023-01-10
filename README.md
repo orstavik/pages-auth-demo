@@ -1,2 +1,3 @@
 # pages-auth-demo
-simple demo of github auth using cloudflare pages
+
+Simple demo of github auth using cloudflare pages
