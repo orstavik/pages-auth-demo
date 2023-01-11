@@ -1,9 +1,10 @@
+import {decode, sign, verify} from "./JWT";
+
 export async function onRequest({request, env}){
-  const res = `<pre>
-hello sunshine
-GITHUB_CLIENT_ID=${env.GITHUB_CLIENT_ID}
-GITHUB_CLIENT_SECRET=${env.GITHUB_CLIENT_SECRET}
-GITHUB_REDIRECT=${env.GITHUB_REDIRECT}
-</pre>`;
-  return new Response(res);
+  const hello = "hello sunshine";
+  const secret = "secret";
+  const encrypted = await sign({hello}, secret);
+  const verified = await verify(encrypted, secret);
+  const decoded = await decode(encrypted);
+  return new Response(JSON.stringify({hello, secret, encrypted, verified, decoded}));
 }
