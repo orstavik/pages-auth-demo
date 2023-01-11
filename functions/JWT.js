@@ -36,6 +36,18 @@ function prepPKCS8(secret) {
   return _str2ab(secret);
 }
 
+export async function makeKey(secret, algorithm = 'HS256') {
+  let keyFormat = 'raw';
+  let keyData = secret;
+  if (secret.startsWith('-----BEGIN')) {
+    keyFormat = 'pkcs8';
+    keyData = prepPKCS8(secret);
+  }
+  // else
+  //   keyData = _utf8ToUint8Array(secret);
+  return await crypto.subtle.importKey(keyFormat, keyData, algorithm, false, ['sign', 'verify']);
+}
+
 /**
  * Signs a payload and returns the token
  *
@@ -69,15 +81,7 @@ export async function sign(payload, secret, options = {algorithm: 'HS256', heade
   let h = toBase64url(stringify);
 
   const partialToken = `${h}.${p}`;
-  let keyFormat = 'raw';
-  let keyData = secret;
-  if (secret.startsWith('-----BEGIN')) {
-    keyFormat = 'pkcs8';
-    keyData = prepPKCS8(secret);
-  }
-  // else
-  //   keyData = _utf8ToUint8Array(secret);
-  const key = await crypto.subtle.importKey(keyFormat, keyData, algorithm, false, ['sign']);
+  const key  = await makeKey(secret, algorithm);
   const signature = await crypto.subtle.sign(algorithm, key, partialToken);//_utf8ToUint8Array(partialToken));
   const three = String.fromCharCode.apply(0, new Uint8Array(signature));
   const threeB = toBase64url(three);
@@ -125,15 +129,7 @@ export async function verify(token, secret, options = {algorithm: 'HS256', throw
       throw 'EXPIRED';
     return false;
   }
-  let keyFormat = 'raw';
-  let keyData = secret;
-  if (secret.startsWith('-----BEGIN')) {
-    keyFormat = 'spki';
-    keyData = prepPKCS8(secret);
-  }
-  // else
-  //   keyData = _utf8ToUint8Array(secret);
-  const key = await crypto.subtle.importKey(keyFormat, keyData, algorithm, false, ['verify']);
+  const key  = await makeKey(secret, algorithm);
   const headerPayload = `${tokenParts[0]}.${tokenParts[1]}`;
   const signatureStr = fromBase64url(tokenParts[2]);
   const signature = new Uint8Array(Array.prototype.map.call(signatureStr, c => c.charCodeAt(0)))
