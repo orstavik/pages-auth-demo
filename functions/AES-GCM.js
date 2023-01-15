@@ -7,8 +7,7 @@ export async function encode(message, key) {
   const uint8Array = new TextEncoder().encode(message);
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const cipher = await crypto.subtle.encrypt({name: "AES-GCM", iv: iv}, key, uint8Array);
-  return base64EncArr(new Uint8Array(iv)) + "." + base64EncArr(cipher);
-
+  return base64EncArr(iv) + "." + base64EncArr(new Uint8Array(cipher));
 }
 
 export async function decode(cipherText, key) {
@@ -81,6 +80,5 @@ function base64EncArr(aBytes) {
       nUint24 = 0;
     }
   }
-  return sB64Enc.substr(0, sB64Enc.length - 2 + nMod3) + (nMod3 === 2 ? "" : nMod3 === 1 ? "=" : "==");
+  return sB64Enc.substring(0, sB64Enc.length - 2 + nMod3) + (nMod3 === 2 ? "" : nMod3 === 1 ? "=" : "==");
 }
-
