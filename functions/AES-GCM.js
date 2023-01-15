@@ -16,6 +16,28 @@ export async function decode(cipherText, key) {
   return new TextDecoder().decode(payload);
 }
 
+export async function encodeTimestamp(key){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const iv64 = base64EncArr(iv);
+  const timeStamp = new Date().getTime();
+  const payload = JSON.stringify({iv64, timeStamp});
+  const ab = new TextEncoder().encode(payload);
+  const cipher = await crypto.subtle.encrypt({name: "AES-GCM", iv}, key, ab);
+  return iv64 + "." + base64EncArr(new Uint8Array(cipher));
+}
+
+export async function decodeTimestamp(cipherText, key, ttl){
+  const [iv64, cipher64] = cipherText.split(".");
+  const uint8Array = await crypto.subtle.decrypt({name: "AES-GCM", iv: base64DecToArr(iv64)}, key, base64DecToArr(cipher64));
+  const payload = new TextDecoder().decode(uint8Array);
+  const obj = JSON.parse(payload);
+  if (obj.iv64 !== iv64)
+    throw "wrong iv.";
+  const delay = new Date().getTime() - obj.timeStamp;
+  if (delay > ttl)
+    throw `delay bigger than ttl. ${delay}, timestamp: ${obj.timeStamp}`;
+  return obj;
+}
 
 // Unfortunately, atob/btoa in js doesn't work properly. So we need this method for converting between base64 and numbers/arrayBuffers. See:
 // https://developer.mozilla.org/en-US/docs/Glossary/Base64#solution_2_%E2%80%93_rewriting_atob_and_btoa_using_typedarrays_and_utf-8
@@ -49,7 +71,6 @@ function base64DecToArr(sBase64, nBlocksSize) {
       nUint24 = 0;
     }
   }
-
   return taBytes;
 }
 
