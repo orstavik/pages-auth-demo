@@ -1,19 +1,36 @@
 import {GITHUB} from "./GITHUB";
-import {decodeTimestamp, hashKey256} from "./AES-GCM";
+import {decodeBase64Token, encodeBase64Token, hashKey256} from "./AES-GCM";
 
-let stateKey;
+let stateKey, cookieKey;
+
 export async function onRequest(context) {
   const {request, env: {GITHUB_CLIENT_ID, GITHUB_REDIRECT, GITHUB_CLIENT_SECRET, STATE_SECRET}} = context;
   stateKey ??= await hashKey256(STATE_SECRET);
   const params = new URL(request.url).searchParams;
   const code = params.get('code');
   const state = params.get('state');
-  const payload = await decodeTimestamp(state, stateKey, 100000);
+  const ttlState = 100000;
+  const ttlSession = 1 * 30 * 1000; //30sec
+  const cookie_secret = "hello sunshine";
+  try {
+    const emptyBase64Token = await decodeBase64Token(state, stateKey, ttlState);
+  } catch (err) {
+    return new Response('state error', {status: 500});
+  }
 
   const responseAccessToken = await GITHUB.fetchAccessToken(code, GITHUB_CLIENT_ID, GITHUB_REDIRECT, GITHUB_CLIENT_SECRET, state);
   const data = await responseAccessToken.json();
   const responseUserData = await GITHUB.fetchUserData(data['access_token']);
   const userData = await responseUserData.json();
-  //todo here
-  return new Response(JSON.stringify(userData, null, 2));
+
+  const cookiePayload = {
+    user: userData.login + "@github",
+    rights: "edit,admin", //todo this we need to get from the environment variables
+    ip: request.headers.get("CF-Connecting-IP")
+  };
+  cookieKey ??= await hashKey256(cookie_secret);
+  const base64cookieToken = await encodeBase64Token(cookieKey, cookiePayload);
+  const response = new Response("hello cookie sunshine: " + base64cookieToken);
+  response.headers.set("Set-Cookie", `id=${base64cookieToken}; Max-Age=${ttlSession / 1000}; secure; httpOnly`);
+  return response;
 }

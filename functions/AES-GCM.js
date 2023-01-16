@@ -16,7 +16,7 @@ export async function decode(cipherText, key) {
   return new TextDecoder().decode(payload);
 }
 
-export async function encodebase64Token(key, dict = {}) {
+export async function encodeBase64Token(key, dict = {}) {
   dict.iat = new Date().getTime();
   const iv = crypto.getRandomValues(new Uint8Array(12));
   dict.iv64 = base64EncArr(iv);
