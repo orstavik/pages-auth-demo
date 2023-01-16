@@ -1,10 +1,10 @@
-import {GITHUB} from "./GITHUB";
+import {GOOGLE} from "./GOOGLE";
 import {decodeBase64Token, encodeBase64Token, hashKey256} from "./AES-GCM";
 
 let stateKey, cookieKey;
 
 export async function onRequest(context) {
-  const {request, env: {GITHUB_CLIENT_ID, GITHUB_REDIRECT, GITHUB_CLIENT_SECRET, STATE_SECRET, SESSION_SECRET, SESSION_TTL, STATE_TTL}} = context;
+  const {request, env: {GOOGLE_CLIENT_ID, GOOGLE_REDIRECT, GOOGLE_CLIENT_SECRET, STATE_SECRET, SESSION_SECRET, SESSION_TTL, STATE_TTL}} = context;
   stateKey ??= await hashKey256(STATE_SECRET);
   const params = new URL(request.url).searchParams;
   const code = params.get('code');
@@ -15,10 +15,8 @@ export async function onRequest(context) {
     return new Response('state error', {status: 500});
   }
 
-  const responseAccessToken = await GITHUB.fetchAccessToken(code, GITHUB_CLIENT_ID, GITHUB_REDIRECT, GITHUB_CLIENT_SECRET, state);
-  const data = await responseAccessToken.json();
-  const responseUserData = await GITHUB.fetchUserData(data['access_token']);
-  const userData = await responseUserData.json();
+  const [providerId, username] = await GOOGLE.fetchAccessToken(code, GOOGLE_CLIENT_ID, GOOGLE_REDIRECT, GOOGLE_CLIENT_SECRET, state);
+  const userData = await {providerId, username};
 
   const cookiePayload = {
     user: userData.login + "@google",
