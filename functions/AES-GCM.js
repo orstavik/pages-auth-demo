@@ -16,28 +16,35 @@ export async function decode(cipherText, key) {
   return new TextDecoder().decode(payload);
 }
 
+//the dictionary object will be given a new iv, and new iat value
+//if no ttl is given in the dict, a default ttl = 10s/10000ms
 export async function encodeBase64Token(key, dict = {}) {
   dict.iat = new Date().getTime();
   const iv = crypto.getRandomValues(new Uint8Array(12));
   dict.iv64 = base64EncArr(iv);
+  dict.ttl ??= 10000;
   const ab = new TextEncoder().encode(JSON.stringify(dict));
   const cipher = await crypto.subtle.encrypt({name: "AES-GCM", iv}, key, ab);
   return dict.iv64 + "." + base64EncArr(new Uint8Array(cipher));
 }
 
-export async function decodeBase64Token(cipherText, key, ttl) {
-  const [iv64, cipher64] = cipherText.split(".");
+export async function decodeBase64Token(cipherText, key) {
+  if (!cipherText)
+    throw "bad cipherText.";
+  const [iv64, cipher64, err] = cipherText.split(".");
+  if (!iv64 || !cipher64 || err)
+    throw "bad cipherText.";
   const uint8Array = await crypto.subtle.decrypt({
     name: "AES-GCM",
     iv: base64DecToArr(iv64)
   }, key, base64DecToArr(cipher64));
   const obj = JSON.parse(new TextDecoder().decode(uint8Array));
   if (obj.iv64 !== iv64)
-    throw "wrong iv.";
+    throw "bad iv.";
   const now = new Date().getTime();
   const age = now - obj.iat;
-  if (age < 0 || age > ttl)
-    throw `Outside TTL; ttl=${ttl} now=${now} iat=${obj.iat} age=${age}`;
+  if (age < 0 || age > obj.ttl)
+    throw `bad ttl. ttl=${obj.ttl} now=${now} iat=${obj.iat} age=${age}`;
   return obj;
 }
 

@@ -22,6 +22,7 @@ export async function onRequest(context) {
 
   const cookiePayload = {
     user: userData.login + "@github",
+    ttl: STATE_TTL,
     rights: "edit,admin", //todo this we need to get from the environment variables
     ip: request.headers.get("CF-Connecting-IP")
   };
