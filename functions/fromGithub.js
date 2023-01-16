@@ -4,16 +4,13 @@ import {decodeBase64Token, encodeBase64Token, hashKey256} from "./AES-GCM";
 let stateKey, cookieKey;
 
 export async function onRequest(context) {
-  const {request, env: {GITHUB_CLIENT_ID, GITHUB_REDIRECT, GITHUB_CLIENT_SECRET, STATE_SECRET}} = context;
+  const {request, env: {GITHUB_CLIENT_ID, GITHUB_REDIRECT, GITHUB_CLIENT_SECRET, STATE_SECRET, SESSION_SECRET, SESSION_TTL, STATE_TTL}} = context;
   stateKey ??= await hashKey256(STATE_SECRET);
   const params = new URL(request.url).searchParams;
   const code = params.get('code');
   const state = params.get('state');
-  const ttlState = 100000;
-  const ttlSession = 1 * 30 * 1000; //30sec
-  const cookie_secret = "hello sunshine";
   try {
-    const emptyBase64Token = await decodeBase64Token(state, stateKey, ttlState);
+    const emptyBase64Token = await decodeBase64Token(state, stateKey, STATE_TTL);
   } catch (err) {
     return new Response('state error', {status: 500});
   }
@@ -28,9 +25,9 @@ export async function onRequest(context) {
     rights: "edit,admin", //todo this we need to get from the environment variables
     ip: request.headers.get("CF-Connecting-IP")
   };
-  cookieKey ??= await hashKey256(cookie_secret);
+  cookieKey ??= await hashKey256(SESSION_SECRET);
   const base64cookieToken = await encodeBase64Token(cookieKey, cookiePayload);
   const response = new Response("hello cookie sunshine: " + base64cookieToken);
-  response.headers.set("Set-Cookie", `id=${base64cookieToken}; Max-Age=${ttlSession / 1000}; secure; httpOnly`);
+  response.headers.set("Set-Cookie", `id=${base64cookieToken}; Max-Age=${SESSION_TTL / 1000}; secure; httpOnly`);
   return response;
 }
