@@ -16,29 +16,28 @@ export async function decode(cipherText, key) {
   return new TextDecoder().decode(payload);
 }
 
-export async function encodeTimestamp(key) {
+export async function encodebase64Token(key, dict = {}) {
+  dict.iat = new Date().getTime();
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const iv64 = base64EncArr(iv);
-  const timeStamp = new Date().getTime();
-  const payload = JSON.stringify({iv64, timeStamp});
-  const ab = new TextEncoder().encode(payload);
+  dict.iv64 = base64EncArr(iv);
+  const ab = new TextEncoder().encode(JSON.stringify(dict));
   const cipher = await crypto.subtle.encrypt({name: "AES-GCM", iv}, key, ab);
-  return iv64 + "." + base64EncArr(new Uint8Array(cipher));
+  return dict.iv64 + "." + base64EncArr(new Uint8Array(cipher));
 }
 
-export async function decodeTimestamp(cipherText, key, ttl) {
+export async function decodeBase64Token(cipherText, key, ttl) {
   const [iv64, cipher64] = cipherText.split(".");
   const uint8Array = await crypto.subtle.decrypt({
     name: "AES-GCM",
     iv: base64DecToArr(iv64)
   }, key, base64DecToArr(cipher64));
-  const payload = new TextDecoder().decode(uint8Array);
-  const obj = JSON.parse(payload);
+  const obj = JSON.parse(new TextDecoder().decode(uint8Array));
   if (obj.iv64 !== iv64)
     throw "wrong iv.";
-  const delay = new Date().getTime() - obj.timeStamp;
-  if (delay > ttl)
-    throw `delay bigger than ttl. ${delay}, timestamp: ${obj.timeStamp}`;
+  const now = new Date().getTime();
+  const age = now - obj.iat;
+  if (age < 0 || age > ttl)
+    throw `Outside TTL; ttl=${ttl} now=${now} iat=${obj.iat} age=${age}`;
   return obj;
 }
 
