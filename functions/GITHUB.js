@@ -1,7 +1,7 @@
+//https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps#1-request-a-users-github-identity
 export class GITHUB {
 
-  //https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps#1-request-a-users-github-identity
-  static loginLink({GITHUB_REDIRECT, GITHUB_CLIENT_ID}, state) {
+  static loginLink(GITHUB_REDIRECT, GITHUB_CLIENT_ID, state) {
     const url = new URL("https://github.com/login/oauth/authorize");
     url.searchParams.set("client_id", GITHUB_CLIENT_ID);
     url.searchParams.set("redirect_uri", GITHUB_REDIRECT);
