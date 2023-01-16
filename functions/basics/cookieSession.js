@@ -1,4 +1,4 @@
-import {encode, decode, hashKey256} from "./AES-GCM";
+import {encode, decode, hashKey256} from "../AES-GCM";
 
 let cookieKey;
 
