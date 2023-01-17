@@ -10,20 +10,17 @@ const ttl = 10000;
 
 let cookieKey;
 
-async function addKeys(request) {
-  request.cookieKey = cookieKey ??= await hashKey256("hello sunshine");
-  return request;
+async function addKeys({data}) {
+  data.cookieKey = cookieKey ??= await hashKey256("hello sunshine");
 }
 
-async function decryptCookie(request) {
+async function decryptCookie({request, data}) {
   try {
-    cookieKey ??= await hashKey256("hello sunshine");
     const sessionCipher = readCookies(request).id;
     if (sessionCipher)
-      request.session = await decodeBase64Token(sessionCipher, cookieKey);
+      data.session = await decodeBase64Token(sessionCipher, data.cookieKey);
   } catch (err) { //no valid session cookie
   }
-  return request;
 }
 
 async function makeCookieText(dict, request) {
@@ -31,18 +28,17 @@ async function makeCookieText(dict, request) {
   return `id=${cookieCode}; Domain=${new URL(request.url).hostname}; SameSite=LAX; Max-Age=${dict.ttl / 1000}; secure; httpOnly`;
 }
 
-async function rollCookie(request, response) {
-  const session = request.session;
+async function rollCookie({request, data, response}) {
+  const session = data.session;
   if (session && (session.ttl * 2 / 3) < new Date().getTime() - session.iat) {   //we can roll
     session.ip = request.headers.get("CF-Connecting-IP");
     //session.ttl = ttl; //todo should we?
     response.headers.set("Set-Cookie", await makeCookieText(session, request));
   }
-  return response;
 }
 
-async function addCookie(request, response) {
-  if (!request.session) {
+async function addCookie({request, data, response}) {
+  if (!data.session) {
     const dict = {
       ttl,
       user: "test@test",
@@ -50,14 +46,13 @@ async function addCookie(request, response) {
     };
     response.headers.set("Set-Cookie", await makeCookieText(dict, request));
   }
-  return response;
 }
 
-export async function onRequest({request}) {
-  request = await addKeys(request);
-  request = await decryptCookie(request);
-  let response = new Response(JSON.stringify(request.session ?? null, null, 2));
-  response = await rollCookie(request, response);
-  response = await addCookie(request, response);
-  return response;
+export async function onRequest(context) {
+  await addKeys(context);  //or rename to addCookieKey??. That is not that bad. And have more than one such function. Or ..."COOKIE_KEY"++
+  await decryptCookie(context);//decryptSession
+  context.response = new Response(JSON.stringify(context.data.session ?? null, null, 2));
+  await rollCookie(context);
+  await addCookie(context);
+  return context.response;
 }
