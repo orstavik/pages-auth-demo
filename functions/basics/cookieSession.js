@@ -1,43 +1,63 @@
-import {encode, decode, hashKey256} from "../AES-GCM";
+import {decodeBase64Token, encodeBase64Token, hashKey256} from "../AES-GCM";
+import {readCookies} from "./cookie";
+
+const ttl = 10000;
+
+//1. on the incoming request, we need to check if the session is good.
+//2. on the incoming request with an unwrapped cookie, we add a rollCookie if rollTime
+//3. then we make the response depending on the state of the session
+
 
 let cookieKey;
 
+async function addKeys(request) {
+  request.cookieKey = cookieKey ??= await hashKey256("hello sunshine");
+  return request;
+}
+
+async function decryptCookie(request) {
+  try {
+    cookieKey ??= await hashKey256("hello sunshine");
+    const sessionCipher = readCookies(request).id;
+    if (sessionCipher)
+      request.session = await decodeBase64Token(sessionCipher, cookieKey);
+  } catch (err) { //no valid session cookie
+  }
+  return request;
+}
+
+async function makeCookieText(dict, request) {
+  const cookieCode = await encodeBase64Token(cookieKey, dict);
+  return `id=${cookieCode}; Domain=${new URL(request.url).hostname}; SameSite=LAX; Max-Age=${dict.ttl / 1000}; secure; httpOnly`;
+}
+
+async function rollCookie(request, response) {
+  const session = request.session;
+  if (session && (session.ttl * 2 / 3) < new Date().getTime() - session.iat) {   //we can roll
+    session.ip = request.headers.get("CF-Connecting-IP");
+    //session.ttl = ttl; //todo should we?
+    response.headers.set("Set-Cookie", await makeCookieText(session, request));
+  }
+  return response;
+}
+
+async function addCookie(request, response) {
+  if (!request.session) {
+    const dict = {
+      ttl,
+      user: "test@test",
+      ip: request.headers.get("CF-Connecting-IP")
+    };
+    response.headers.set("Set-Cookie", await makeCookieText(dict, request));
+  }
+  return response;
+}
+
 export async function onRequest({request}) {
-  cookieKey ??= await hashKey256("hello sunshine");
-
-  //1. convert incoming cookies to a dictionary
-  const cStr = request.headers.get("Cookie");
-  const cookies = cStr && Object.fromEntries(cStr.split(";").map(i => i.split("=").map(s => s.trim())));
-
-  //2. decrypt id cookie
-  //todo decode can throw error.
-  const payload = cookies.id ? await decode(cookies.id, cookieKey) : null;
-
-  //2b. check if cookie.ok.
-  //todo 0 redo, 1 rollover, 2 ok
-  const obj = JSON.parse(payload);
-  const ttl = 10 * 1000;   //10sek
-  const now = new Date().getTime();
-  if (obj?.iat)
-    obj.ok = obj.iat <= now && now <= obj.iat + ttl;
-
-  //3. make a response with the decoded
-  const response = new Response(JSON.stringify(obj, null, 2));
-
-  //3b. if cookie.ok, skip making new cookie
-  if (obj?.ok)
-    return response;
-
-  //4. make a new id cookie going out
-  const cookieDough = {
-    user: "test@test",
-    iat: now,
-    ip: request.headers.get("CF-Connecting-IP")
-  };
-
-  //5. encrypt the session id cookie and add it to the response
-  const cookieTxt = await encode(JSON.stringify(cookieDough), cookieKey);
-  const hostname = new URL(request.url).hostname;
-  response.headers.set("Set-Cookie", `id=${cookieTxt}; Domain=${hostname}; SameSite=LAX; Max-Age=${ttl / 1000}; secure; httpOnly`);
+  request = await addKeys(request);
+  request = await decryptCookie(request);
+  let response = new Response(JSON.stringify(request.session ?? null, null, 2));
+  response = await rollCookie(request, response);
+  response = await addCookie(request, response);
   return response;
 }
