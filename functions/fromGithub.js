@@ -3,6 +3,7 @@ import {decodeBase64Token, encodeBase64Token, hashKey256} from "./AES-GCM";
 
 let stateKey, cookieKey;
 
+
 export async function onRequest(context) {
   const {request, env: {GITHUB_CLIENT_ID, GITHUB_REDIRECT, GITHUB_CLIENT_SECRET, STATE_SECRET, SESSION_SECRET, SESSION_TTL, STATE_TTL}} = context;
   stateKey ??= await hashKey256(STATE_SECRET);
@@ -21,7 +22,8 @@ export async function onRequest(context) {
   const userData = await responseUserData.json();
 
   const cookiePayload = {
-    user: userData.login + "@google",
+    user: userData.login + "@github",
+    ttl: STATE_TTL,
     rights: "edit,admin", //todo this we need to get from the environment variables
     ip: request.headers.get("CF-Connecting-IP")
   };
