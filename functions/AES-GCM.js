@@ -1,9 +1,18 @@
-export async function hashKey256(secret) {
-  const keyData = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(secret));
-  return crypto.subtle.importKey("raw", keyData, "AES-GCM", true, ["encrypt", "decrypt"]);
+const secretKeys = {};
+
+function hashKey256(secret) {
+  const cache = secretKeys[secret];
+  if (cache)
+    return cache;
+  return crypto.subtle.digest("SHA-256", new TextEncoder().encode(secret)).then(keyData =>
+    secretKeys[secret] = crypto.subtle.importKey("raw", keyData, "AES-GCM", true, ["encrypt", "decrypt"])
+  );
 }
 
 export async function encode(message, key) {
+  key = hashKey256(key);
+  if (key instanceof Promise)
+    key = await key;
   const uint8Array = new TextEncoder().encode(message);
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const cipher = await crypto.subtle.encrypt({name: "AES-GCM", iv: iv}, key, uint8Array);
@@ -11,6 +20,9 @@ export async function encode(message, key) {
 }
 
 export async function decode(cipherText, key) {
+  key = hashKey256(key);
+  if (key instanceof Promise)
+    key = await key;
   const [iv, cipher] = cipherText.split(".").map(base64DecToArr);
   const payload = await crypto.subtle.decrypt({name: "AES-GCM", iv: iv}, key, cipher);
   return new TextDecoder().decode(payload);
@@ -19,6 +31,9 @@ export async function decode(cipherText, key) {
 //the dictionary object will be given a new iv, and new iat value
 //if no ttl is given in the dict, a default ttl = 10s/10000ms
 export async function encodeBase64Token(key, dict = {}) {
+  key = hashKey256(key);
+  if (key instanceof Promise)
+    key = await key;
   dict.iat = new Date().getTime();
   const iv = crypto.getRandomValues(new Uint8Array(12));
   dict.iv64 = base64EncArr(iv);
@@ -29,6 +44,9 @@ export async function encodeBase64Token(key, dict = {}) {
 }
 
 export async function decodeBase64Token(cipherText, key) {
+  key = hashKey256(key);
+  if (key instanceof Promise)
+    key = await key;
   if (!cipherText)
     throw "bad cipherText.";
   const [iv64, cipher64, err] = cipherText.split(".");
