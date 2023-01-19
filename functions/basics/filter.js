@@ -1,12 +1,17 @@
 const whitelist = {
   request: {
     method: 1,
-    url: 1,
-    body: 4,
+    url: {
+      href: 1,
+      searchParams: {
+        bob: 1
+      }
+    },
+    body: 1,
     headers: {
-      "cf-connecting-ip": 2,
-      "cf-ray": 2,
-      cookie: 3,
+      "cf-connecting-ip": 1,
+      "cf-ray": 1,
+      cookie: 1,
     },
     cf: {
       asn: 1,
@@ -18,36 +23,47 @@ const whitelist = {
   functionPath: 1,
 }
 
-const functions = {
-  1: function getValue(parent, key) {
-    return parent[key];
-  },
-  2: function getHeader(parent, key) {
-    return parent.get(key);
-  },
-  3: function getCookieObj(parent, key) {
-    const cStr = parent.get(key);
-    return cStr ? Object.fromEntries(cStr.split(";").map(s => s.trim()).map(i => i.split("="))) : {};
-  },
-  4: function getJson(parent, key){
-    const value = parent[key];
-    return value === undefined ? undefined : JSON.parse(value);
+class ContextProxy {
+  static #map = new Map([
+    [Headers, {
+      get(target, key) {
+        const value = target.get(key);
+        if (key === "cookie")
+          return value ? Object.fromEntries(value.split(";").map(s => s.trim()).map(i => i.split("="))) : {};
+        return value || target[key];
+      }
+    }],
+    [URLSearchParams, {
+      get(target, key) {
+        return target.get(key) || target[key];
+      }
+    }],
+    [Request, {
+      get(target, key) {
+        if (key === "body" && target.headers.get("content-type") === "application/json")
+          return JSON.parse(target[key]);
+        if(key === "url")
+          return new URL(target[key]);
+        return target[key];
+      }
+    }]
+  ]);
+
+  static get(obj) {
+    const handler = this.#map.get(obj.constructor);
+    return handler ? new Proxy(obj, handler) : obj;
   }
-};
 
-(function prepWhitelist(filter, functions) {
-  for (let [key, value] of Object.entries(filter))
-    value > 0 ? filter[key] = functions[value] : prepWhitelist(value, functions);
-})(whitelist, functions);
-
-export function filter(f, obj) {
-  const res = {};
-  for (let [key, value] of Object.entries(f))
-    res[key] = value instanceof Function ? value(obj, key) : filter(value, obj[key]);
-  return res;
+  static filter(f, obj){
+    obj = ContextProxy.get(obj);
+    const res = {};
+    for (let [key, value] of Object.entries(f))
+      res[key] = value === 1 ? obj[key] : ContextProxy.filter(value, obj[key]);
+    return res;
+  }
 }
 
 export async function onRequest(context) {
-  context.state = filter(whitelist, context);
+  context.state = ContextProxy.filter(whitelist, context);
   return new Response(JSON.stringify(context.state, null, 2));
 }
