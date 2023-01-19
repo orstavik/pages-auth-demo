@@ -11,7 +11,10 @@ const whitelist = {
     headers: {
       "cf-connecting-ip": 1,
       "cf-ray": 1,
-      cookie: 1,
+      cookie: {
+        hello: 1,
+        bob: 1
+      },
     },
     cf: {
       asn: 1,
@@ -42,7 +45,7 @@ class ContextProxy {
       get(target, key) {
         if (key === "body" && target.headers.get("content-type") === "application/json")
           return JSON.parse(target[key]);
-        if(key === "url")
+        if (key === "url")
           return new URL(target[key]);
         return target[key];
       }
@@ -54,12 +57,14 @@ class ContextProxy {
     return handler ? new Proxy(obj, handler) : obj;
   }
 
-  static filter(f, obj){
+  static filter(f, obj) {
+    if(obj === null || obj === undefined)
+      return null;
     obj = ContextProxy.get(obj);
     const res = {};
     for (let [key, value] of Object.entries(f))
-      res[key] = value === 1 ? obj[key] : ContextProxy.filter(value, obj[key]);
-    return res;
+      res[key] = value === 1 ? obj[key] ?? null : ContextProxy.filter(value, obj[key]);
+    return res;                         //todo we can skip null here.. but then we don't see that we look for it.
   }
 }
 

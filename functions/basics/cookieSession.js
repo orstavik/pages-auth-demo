@@ -1,4 +1,4 @@
-import {decodeBase64Token, encodeBase64Token, hashKey256} from "../AES-GCM";
+import {decodeBase64Token, encodeBase64Token} from "../AES-GCM";
 import {readCookies} from "./cookie";
 
 const ttl = 10000;
@@ -11,7 +11,7 @@ const ttl = 10000;
 let cookieKey;
 
 async function addKeys({data}) {
-  data.cookieKey = cookieKey ??= await hashKey256("hello sunshine");
+  data.cookieKey = cookieKey = "hello sunshine";
 }
 
 async function decryptCookie({request, data}) {

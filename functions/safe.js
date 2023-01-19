@@ -1,6 +1,4 @@
-import {decodeBase64Token, hashKey256} from "./AES-GCM";
-
-let cookieKey;
+import {decodeBase64Token} from "./AES-GCM";
 
 async function getAndValidateSessionCookie(request, SESSION_TTL, key) {
   const cStr = request.headers.get("Cookie");
@@ -16,8 +14,7 @@ async function getAndValidateSessionCookie(request, SESSION_TTL, key) {
 }
 
 export async function onRequest({request, env: {SESSION_SECRET, SESSION_TTL}}) {
-  cookieKey ??= await hashKey256(SESSION_SECRET);
-  const cookieAsObj = await getAndValidateSessionCookie(request, SESSION_TTL,  cookieKey);
+  const cookieAsObj = await getAndValidateSessionCookie(request, SESSION_TTL,  SESSION_SECRET);
   if (cookieAsObj)
     return new Response("Safe, cookie content: " + JSON.stringify(cookieAsObj, null, 2), {status: 200});
   return Response.redirect(new URL("/login", request.url));
