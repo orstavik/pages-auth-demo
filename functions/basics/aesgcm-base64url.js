@@ -9,7 +9,7 @@ function toBase64url(base64str) {
   return base64str.replaceAll("+", '-').replaceAll("/", '_').replaceAll("=", '');
 }
 
-function fromBase64url(base64urlStr) {
+export function fromBase64url(base64urlStr) {
   base64urlStr = base64urlStr.replaceAll("-", '+').replaceAll("_", '/');
   if (base64urlStr.length % 4 === 2)
     base64urlStr += '==';
