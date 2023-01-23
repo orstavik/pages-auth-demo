@@ -1,32 +1,4 @@
-const whitelist = {
-  request: {
-    method: 1,
-    url: {
-      href: 1,
-      searchParams: {
-        bob: 1
-      }
-    },
-    body: 1,
-    headers: {
-      "cf-connecting-ip": 1,
-      "cf-ray": 1,
-      cookie: {
-        hello: 1,
-        bob: 1
-      },
-    },
-    cf: {
-      asn: 1,
-      colo: 1,
-      longitude: 1,
-      latitude: 1,
-    }
-  },
-  functionPath: 1,
-}
-
-class ContextProxy {
+export class ContextProxy {
   static #map = new Map([
     [Headers, {
       get(target, key) {
@@ -66,9 +38,4 @@ class ContextProxy {
       res[key] = value === 1 ? obj[key] ?? null : ContextProxy.filter(value, obj[key]);
     return res;                         //todo we can skip null here.. but then we don't see that we look for it.
   }
-}
-
-export async function onRequest(context) {
-  context.state = ContextProxy.filter(whitelist, context);
-  return new Response(JSON.stringify(context.state, null, 2));
 }
