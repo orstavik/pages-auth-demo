@@ -1,24 +1,18 @@
 //todo
-
-function randomString(length) {
-  const iv = crypto.getRandomValues(new Uint8Array(length));
-  return Array.from(iv).map(b => ('00' + b.toString(16)).slice(-2)).join('');
-}
-
-function redirectUrl(path, params) {
-  return path + '?' + Object.entries(params).map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
-}
+import {base64EncArr} from "./AES-GCM";
 
 export class GOOGLE {
   static loginLink(GOOGLE_OAUTH_LINK, GOOGLE_REDIRECT, GOOGLE_CLIENT_ID, state) {
-    return redirectUrl(GOOGLE_OAUTH_LINK, {
+    const url = new URL(GOOGLE_OAUTH_LINK);
+    url.search = new URLSearchParams({
       state: state,
-      nonce: randomString(12),
+      nonce: base64EncArr(crypto.getRandomValues(new Uint8Array(12))),
       client_id: GOOGLE_CLIENT_ID,
       redirect_uri: GOOGLE_REDIRECT,
       scope: 'openid email profile',
       response_type: 'code'
     });
+    return url.href;
   }
   static async getUserData(code, GOOGLE_CODE_LINK, GOOGLE_CLIENT_ID, GOOGLE_REDIRECT, GOOGLE_CLIENT_SECRET, grant_type) {
     const tokenPackage = await fetch(GOOGLE_CODE_LINK, {
@@ -33,9 +27,13 @@ export class GOOGLE {
       })
     });
     const jwt = await tokenPackage.json();
-    const base64Url = jwt.id_token.split('.')[1];
-    var base64 = base64Url.replaceAll('-', '+').replaceAll('_', '/');
-    var jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+    const jsonPayload = GOOGLE.decodeJwtPayload(jwt);
     return JSON.parse(jsonPayload);
+  }
+
+  static decodeJwtPayload(jwt) {
+    const base64Url = jwt.id_token.split('.')[1];
+    const base64 = base64Url.replaceAll('-', '+').replaceAll('_', '/');
+    return decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
   }
 }
