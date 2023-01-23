@@ -55,7 +55,7 @@ function b64ToUint6(nChr) {
   return nChr > 64 && nChr < 91 ? nChr - 65 : nChr > 96 && nChr < 123 ? nChr - 71 : nChr > 47 && nChr < 58 ? nChr + 4 : nChr === 43 ? 62 : nChr === 47 ? 63 : 0;
 }
 
-function base64DecToArr(sBase64) {
+export function base64DecToArr(sBase64) {
   const taBytes = new Uint8Array((sBase64.length * 3 + 1) >> 2);
   let nMod3, nMod4, nUint24 = 0, nOutIdx = 0;
   for (let nInIdx = 0; nInIdx < sBase64.length; nInIdx++) {

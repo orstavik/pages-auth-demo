@@ -1,5 +1,5 @@
 //https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps#1-request-a-users-github-identity
-import {fromBase64url} from "./basics/aesgcm-base64url.js";
+import {base64DecToArr} from "./AES-GCM.js";
 
 function randomString(length) {
   const iv = crypto.getRandomValues(new Uint8Array(length));
@@ -20,13 +20,6 @@ async function fetchAccessToken(path, data) {
 
 export class GOOGLE {
   static loginLink(GOOGLE_CODE_LINK, GOOGLE_OAUTH_LINK, GOOGLE_REDIRECT, GOOGLE_CLIENT_ID, state) {
-    // const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
-    // url.searchParams.set("client_id", GOOGLE_CLIENT_ID);
-    // url.searchParams.set("redirect_uri", GOOGLE_REDIRECT);
-    // url.searchParams.set("scope", "openid email profile");
-    // url.searchParams.set("state", state);
-    // url.searchParams.set("nonce", randomString(12));
-    // url.searchParams.set("response_type", 'code');
     return redirectUrl(GOOGLE_OAUTH_LINK, {
       state: state,
       nonce: randomString(12),
@@ -37,7 +30,7 @@ export class GOOGLE {
     });
   }
 
-  static async fetchAccessToken(code, GOOGLE_CODE_LINK, GOOGLE_CLIENT_ID, GOOGLE_REDIRECT, GOOGLE_CLIENT_SECRET, grant_type) {
+  static async getUserData(code, GOOGLE_CODE_LINK, GOOGLE_CLIENT_ID, GOOGLE_REDIRECT, GOOGLE_CLIENT_SECRET, grant_type) {
 
     const tokenPackage = await fetchAccessToken(
       GOOGLE_CODE_LINK, {
@@ -52,7 +45,7 @@ export class GOOGLE {
     const jwt = await tokenPackage.json();
     console.log(jwt)
     const [header, payloadB64url, signature] = jwt.id_token.split('.');
-    const payloadText = atob(fromBase64url(payloadB64url));
+    const payloadText = atob(base64DecToArr(payloadB64url));
     const payload = JSON.parse(payloadText);
     return payload;
   }

@@ -15,7 +15,8 @@ export async function onRequest(context) {
     return new Response('state error', {status: 500});
   }
 
-  const payload = await GOOGLE.fetchAccessToken(code, GOOGLE_CODE_LINK, GOOGLE_CLIENT_ID, GOOGLE_REDIRECT, GOOGLE_CLIENT_SECRET, 'authorization_code');
+  const payload = await GOOGLE.getUserData(code, GOOGLE_CODE_LINK, GOOGLE_CLIENT_ID, GOOGLE_REDIRECT, GOOGLE_CLIENT_SECRET, 'authorization_code');
+
   const cookiePayload = {
     user: payload.email,
     rights: "edit,admin", //todo this we need to get from the environment variables
