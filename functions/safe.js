@@ -6,7 +6,7 @@ async function getAndValidateSessionCookie(request, SESSION_TTL, key) {
     const cookies = Object.fromEntries(cStr.split(";").map(i => i.split("=").map(s => s.trim())));
     if (cookies.id) {
       try {
-        return await decodeBase64Token(cookies.id, key, SESSION_TTL);
+        return await decodeBase64Token(key, cookies.id);
       } catch (err) {
       }
     }

@@ -7,7 +7,7 @@ export async function onRequest(context) {
   const code = params.get('code');
   const state = params.get('state');
   try {
-    const emptyBase64Token = await decodeBase64Token(state, STATE_SECRET, STATE_TTL);
+    const emptyBase64Token = await decodeBase64Token(STATE_SECRET, state);
   } catch (err) {
     return new Response('state error', {status: 500});
   }

@@ -4,9 +4,9 @@ function hashKey256(secret) {
   const cache = secretKeys[secret];
   if (cache)
     return cache;
-  return crypto.subtle.digest("SHA-256", new TextEncoder().encode(secret)).then(keyData =>
-    secretKeys[secret] = crypto.subtle.importKey("raw", keyData, "AES-GCM", true, ["encrypt", "decrypt"])
-  );
+  return crypto.subtle.digest("SHA-256", new TextEncoder().encode(secret))
+    .then(keyData => crypto.subtle.importKey("raw", keyData, "AES-GCM", true, ["encrypt", "decrypt"]))
+    .then(key => secretKeys[secret] = key);
 }
 
 export async function encode(message, key) {
@@ -43,7 +43,7 @@ export async function encodeBase64Token(key, dict = {}) {
   return dict.iv64 + "." + base64EncArr(new Uint8Array(cipher));
 }
 
-export async function decodeBase64Token(cipherText, key) {
+export async function decodeBase64Token(key, cipherText) {
   key = hashKey256(key);
   if (key instanceof Promise)
     key = await key;
@@ -73,7 +73,7 @@ function b64ToUint6(nChr) {
   return nChr > 64 && nChr < 91 ? nChr - 65 : nChr > 96 && nChr < 123 ? nChr - 71 : nChr > 47 && nChr < 58 ? nChr + 4 : nChr === 43 ? 62 : nChr === 47 ? 63 : 0;
 }
 
-function base64DecToArr(sBase64) {
+export function base64DecToArr(sBase64) {
   const taBytes = new Uint8Array((sBase64.length * 3 + 1) >> 2);
   let nMod3, nMod4, nUint24 = 0, nOutIdx = 0;
   for (let nInIdx = 0; nInIdx < sBase64.length; nInIdx++) {

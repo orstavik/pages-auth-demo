@@ -18,7 +18,7 @@ async function decryptCookie({request, data}) {
   try {
     const sessionCipher = readCookies(request).id;
     if (sessionCipher)
-      data.session = await decodeBase64Token(sessionCipher, data.cookieKey);
+      data.session = await decodeBase64Token(data.cookieKey, sessionCipher);
   } catch (err) { //no valid session cookie
   }
 }
