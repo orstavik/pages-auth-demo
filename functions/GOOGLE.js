@@ -14,7 +14,7 @@ export class GOOGLE {
     });
     return url.href;
   }
-  static async getUserData(code, GOOGLE_CODE_LINK, GOOGLE_CLIENT_ID, GOOGLE_REDIRECT, GOOGLE_CLIENT_SECRET, grant_type) {
+  static async getUserData(code, GOOGLE_CODE_LINK, GOOGLE_CLIENT_ID, GOOGLE_REDIRECT, GOOGLE_CLIENT_SECRET) {
     const tokenPackage = await fetch(GOOGLE_CODE_LINK, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
