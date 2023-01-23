@@ -38,8 +38,7 @@ export class GOOGLE {
         client_secret: GOOGLE_CLIENT_SECRET,
         redirect_uri: GOOGLE_REDIRECT,
         grant_type: 'authorization_code'
-      }
-    );
+      });
 
     const jwt = await tokenPackage.json();
     console.log(jwt)
