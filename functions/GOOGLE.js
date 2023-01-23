@@ -31,7 +31,6 @@ export class GOOGLE {
   }
 
   static async getUserData(code, GOOGLE_CODE_LINK, GOOGLE_CLIENT_ID, GOOGLE_REDIRECT, GOOGLE_CLIENT_SECRET, grant_type) {
-
     const tokenPackage = await fetchAccessToken(
       GOOGLE_CODE_LINK, {
         code,
