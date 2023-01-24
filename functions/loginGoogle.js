@@ -1,4 +1,4 @@
-import {GOOGLE} from "./GOOGLE";
+import {GOOGLE} from "./AUTH";
 import {encodeBase64Token} from "./AES-GCM";
 
 export async function onRequest({env: {STATE_TTL, STATE_SECRET, GOOGLE_REDIRECT, GOOGLE_CLIENT_ID, GOOGLE_OAUTH_LINK}}) {

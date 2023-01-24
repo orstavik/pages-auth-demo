@@ -1,9 +1,6 @@
-import {GITHUB} from "./GITHUB";
+import {AUTH, bakeCookie} from "./AUTH";
 import {decodeBase64Token, encodeBase64Token} from "./AES-GCM";
 
-function bakeCookie(name, value, domain, ttl) {
-  return `${name}=${value}; Domain=${domain}; SameSite=LAX; Max-Age=${ttl}; path=/; secure; httpOnly`;
-}
 
 export async function onRequest({request, env}) {
   const {
@@ -23,9 +20,9 @@ export async function onRequest({request, env}) {
     return new Response('state error', {status: 500});
   }
 
-  const responseAccessToken = await GITHUB.fetchAccessToken(code, GITHUB_CLIENT_ID, GITHUB_REDIRECT, GITHUB_CLIENT_SECRET, state);
+  const responseAccessToken = await AUTH.fetchAccessToken(code, GITHUB_CLIENT_ID, GITHUB_REDIRECT, GITHUB_CLIENT_SECRET, state);
   const data = await responseAccessToken.json();
-  const responseUserData = await GITHUB.fetchUserData(data.access_token);
+  const responseUserData = await AUTH.fetchUserData(data.access_token);
   const userData = await responseUserData.json();
 
   const base64cookieToken = await encodeBase64Token(SESSION_SECRET, {

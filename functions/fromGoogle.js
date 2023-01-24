@@ -1,4 +1,4 @@
-import {GOOGLE} from "./GOOGLE";
+import {bakeCookie, GOOGLE} from "./AUTH";
 import {decodeBase64Token, encodeBase64Token} from "./AES-GCM";
 
 export async function onRequest(context) {
@@ -13,13 +13,14 @@ export async function onRequest(context) {
   }
   const payload = await GOOGLE.getUserData(code, GOOGLE_CODE_LINK, GOOGLE_CLIENT_ID, GOOGLE_REDIRECT, GOOGLE_CLIENT_SECRET, 'authorization_code');
 
-  const cookiePayload = {
+  const base64cookieToken = await encodeBase64Token(SESSION_SECRET, {
     user: payload.email,
     rights: "edit,admin", //todo this we need to get from the environment variables
-    ip: request.headers.get("CF-Connecting-IP")
-  };
-  const base64cookieToken = await encodeBase64Token(SESSION_SECRET, cookiePayload);
-  const response = new Response("hello cookie sunshine: " + payload.email + "_______________" + JSON.stringify(payload))
-  response.headers.set("Set-Cookie", `id=${base64cookieToken}; Max-Age=${SESSION_TTL / 1000}; secure; httpOnly`);
+    ip: request.headers.get("CF-Connecting-IP"),
+    ttl: SESSION_TTL        
+  });
+  const response = Response.redirect(new URL("/", request.url));
+  response.headers.set("Set-Cookie",
+    bakeCookie("id", base64cookieToken, new URL(request.url).hostname, SESSION_TTL));
   return response;
 }
