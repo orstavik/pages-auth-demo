@@ -1,7 +1,7 @@
 import {ContextProxy} from "../../ContextProxy";
 import {decodeBase64Token} from "../../AES-GCM";
 
-const whitelist3 = {
+const whitelist = {
   request: {
     method: 1,
     url: {
@@ -37,20 +37,15 @@ let filter;
 
 export async function onRequest(context) {
   filter ??= new ContextProxy({
-      //generic cloudflare pages paths
       ".request.url": v => new URL(v),
       ".request.url.searchParams": ContextProxy.parseSearchParams,
       ".request.headers": ContextProxy.wrapHeaderProxy,
       ".request.headers.cookie": ContextProxy.parseCookie,
-      //app specific paths
-      // ".request.headers.cookie.id": async c => {
-      //   const bob = await decodeBase64Token(context.env.SESSION_SECRET, c);
-      //   return bob
-      // },
+
       ".env.rights": JSON.parse,
       ".request.body": JSON.parse,
     });
-  context.state = filter.process(whitelist3, context);
+  context.state = filter.process(whitelist, context);
   context.state.request.headers.cookie.id =
     await decodeBase64Token(context.env.SESSION_SECRET, context.state.request.headers.cookie.id);
   return new Response(JSON.stringify(context.state, null, 2));
