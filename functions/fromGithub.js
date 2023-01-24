@@ -1,8 +1,15 @@
 import {GITHUB} from "./GITHUB";
 import {decodeBase64Token, encodeBase64Token} from "./AES-GCM";
 
+function bakeCookie(name, value, domain, ttl) {
+  return `${name}=${value}; Domain=${domain}; SameSite=LAX; Max-Age=${ttl}; path=/; secure; httpOnly`;
+}
+
 export async function onRequest(context) {
-  const {request, env: {GITHUB_CLIENT_ID, GITHUB_REDIRECT, GITHUB_CLIENT_SECRET, STATE_SECRET, SESSION_SECRET, SESSION_TTL, STATE_TTL}} = context;
+  const {
+    request,
+    env: {GITHUB_CLIENT_ID, GITHUB_REDIRECT, GITHUB_CLIENT_SECRET, STATE_SECRET, SESSION_SECRET, SESSION_TTL}
+  } = context;
   const params = new URL(request.url).searchParams;
   const code = params.get('code');
   const state = params.get('state');
@@ -19,12 +26,13 @@ export async function onRequest(context) {
 
   const cookiePayload = {
     user: userData.login + "@github",
-    ttl: STATE_TTL,
+    ttl: SESSION_TTL,
     rights: "edit,admin", //todo this we need to get from the environment variables
     ip: request.headers.get("CF-Connecting-IP")
   };
   const base64cookieToken = await encodeBase64Token(SESSION_SECRET, cookiePayload);
-  const response = new Response("hello cookie sunshine: " + base64cookieToken);
-  response.headers.set("Set-Cookie", `id=${base64cookieToken}; Max-Age=${SESSION_TTL / 1000}; secure; httpOnly`);
+  const response = Response.redirect(new URL("/", request.url));
+  response.headers.set("Set-Cookie",
+    bakeCookie("id", base64cookieToken, new URL(context.request.url).hostname, SESSION_TTL));
   return response;
 }

@@ -1,40 +1,37 @@
 export class ContextProxy {
-  static #map = new Map([
-    [Headers, {
-      get(target, key) {
-        const value = target.get(key);
-        return key === "cookie" ? Object.fromEntries(new URLSearchParams(value).entries()) :
-          value || target[key];
-      }
-    }],
-    [URLSearchParams, {
+  constructor(...paths) {
+    this.paths = Object.assign({}, ...paths);
+  }
+
+  process(filter, obj, path = "") {
+    const res = {};
+    for (let [k, v] of Object.entries(filter)) {
+      const p = `${path}.${k}`;
+      const func = this.paths[p];
+      let o = obj[k];
+      func && (o = func(o));
+      res[k] = v === 1 ? o ?? null : this.process(v, o, p);
+    }
+    return res;
+  }
+
+  static wrapHeaderProxy(v) {
+    return new Proxy(v, {
       get(target, key) {
         return target.get(key) || target[key];
       }
-    }],
-    [Request, {
-      get(target, key) {
-        if (key === "body" && target.headers.get("content-type") === "application/json")
-          return JSON.parse(target[key]);
-        if (key === "url")
-          return new URL(target[key]);
-        return target[key];
-      }
-    }]
-  ]);
-
-  static get(obj) {
-    const handler = this.#map.get(obj.constructor);
-    return handler ? new Proxy(obj, handler) : obj;
+    });
   }
 
-  static filter(f, obj) {
-    if(obj === null || obj === undefined)
-      return null;
-    obj = ContextProxy.get(obj);
-    const res = {};
-    for (let [key, value] of Object.entries(f))
-      res[key] = value === 1 ? obj[key] ?? null : ContextProxy.filter(value, obj[key]);
-    return res;                         //todo we can skip null here.. but then we don't see that we look for it.
+  static parseSearchParams(v) {
+    return Object.fromEntries(new URLSearchParams(v).entries());
+  }
+
+  static parseCookie(cookieString) {
+    return Object.fromEntries(
+      cookieString.split(";").map(
+        p => p.split(/=(.+)/).map(s => s?.trim())
+      )
+    );
   }
 }

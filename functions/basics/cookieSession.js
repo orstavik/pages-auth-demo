@@ -25,7 +25,7 @@ async function decryptCookie({request, data}) {
 
 async function makeCookieText(dict, request) {
   const cookieCode = await encodeBase64Token(cookieKey, dict);
-  return `id=${cookieCode}; Domain=${new URL(request.url).hostname}; SameSite=LAX; Max-Age=${dict.ttl / 1000}; secure; httpOnly`;
+  return `id=${cookieCode}; Domain=${new URL(request.url).hostname}; SameSite=LAX; Max-Age=${dict.ttl / 1000}; path=/; secure; httpOnly`;
 }
 
 async function rollCookie({request, data, response}) {

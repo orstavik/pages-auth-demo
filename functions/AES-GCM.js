@@ -44,26 +44,30 @@ export async function encodeBase64Token(key, dict = {}) {
 }
 
 export async function decodeBase64Token(key, cipherText) {
-  key = hashKey256(key);
-  if (key instanceof Promise)
-    key = await key;
-  if (!cipherText)
-    throw "bad cipherText.";
-  const [iv64, cipher64, err] = cipherText.split(".");
-  if (!iv64 || !cipher64 || err)
-    throw "bad cipherText.";
-  const uint8Array = await crypto.subtle.decrypt({
-    name: "AES-GCM",
-    iv: base64DecToArr(iv64)
-  }, key, base64DecToArr(cipher64));
-  const obj = JSON.parse(new TextDecoder().decode(uint8Array));
-  if (obj.iv64 !== iv64)
-    throw "bad iv.";
-  const now = new Date().getTime();
-  const age = now - obj.iat;
-  if (age < 0 || age > obj.ttl)
-    throw `bad ttl. ttl=${obj.ttl} now=${now} iat=${obj.iat} age=${age}`;
-  return obj;
+  try {
+    key = hashKey256(key);
+    if (key instanceof Promise)
+      key = await key;
+    if (!cipherText)
+      throw "bad cipherText.";
+    const [iv64, cipher64, err] = cipherText.split(".");
+    if (!iv64 || !cipher64 || err)
+      throw "bad cipherText.";
+    const uint8Array = await crypto.subtle.decrypt({
+      name: "AES-GCM",
+      iv: base64DecToArr(iv64)
+    }, key, base64DecToArr(cipher64));
+    const obj = JSON.parse(new TextDecoder().decode(uint8Array));
+    if (obj.iv64 !== iv64)
+      throw "bad iv.";
+    const now = new Date().getTime();
+    const age = Math.floor((now - obj.iat) / 1000);
+    if (age < 0 || age > obj.ttl)
+      throw `bad ttl. ttl=${obj.ttl} now=${now} iat=${obj.iat} age=${age}`;
+    return obj;
+  } catch (err) {
+    return null;//how do we want this to work?..
+  }
 }
 
 // Unfortunately, atob/btoa in js doesn't work properly. So we need this method for converting between base64 and numbers/arrayBuffers. See:
@@ -74,6 +78,7 @@ function b64ToUint6(nChr) {
 }
 
 export function base64DecToArr(sBase64) {
+  sBase64 = sBase64.replace(/=+$/, "");
   const taBytes = new Uint8Array((sBase64.length * 3 + 1) >> 2);
   let nMod3, nMod4, nUint24 = 0, nOutIdx = 0;
   for (let nInIdx = 0; nInIdx < sBase64.length; nInIdx++) {
