@@ -3,9 +3,8 @@ export class ContextProxy {
     [Headers, {
       get(target, key) {
         const value = target.get(key);
-        if (key === "cookie")
-          return value ? Object.fromEntries(value.split(";").map(s => s.trim()).map(i => i.split("="))) : {};
-        return value || target[key];
+        return key === "cookie" ? Object.fromEntries(new URLSearchParams(value).entries()) :
+          value || target[key];
       }
     }],
     [URLSearchParams, {
