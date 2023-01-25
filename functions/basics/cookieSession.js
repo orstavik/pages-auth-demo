@@ -1,4 +1,4 @@
-import {decodeBase64Token, encodeBase64Token} from "../AES-GCM";
+import {Base64Token} from "../AES-GCM";
 import {readCookies} from "./cookie";
 
 const ttl = 10000;
@@ -18,13 +18,13 @@ async function decryptCookie({request, data}) {
   try {
     const sessionCipher = readCookies(request).id;
     if (sessionCipher)
-      data.session = await decodeBase64Token(data.cookieKey, sessionCipher);
+      data.session = await Base64Token.decode(data.cookieKey, sessionCipher);
   } catch (err) { //no valid session cookie
   }
 }
 
 async function makeCookieText(dict, request) {
-  const cookieCode = await encodeBase64Token(cookieKey, dict);
+  const cookieCode = await Base64Token.encode(cookieKey, dict);
   return `id=${cookieCode}; Domain=${new URL(request.url).hostname}; SameSite=LAX; Max-Age=${dict.ttl / 1000}; path=/; secure; httpOnly`;
 }
 

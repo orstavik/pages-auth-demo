@@ -5,7 +5,7 @@ export function bakeCookie(name, value, domain, ttl) {
 }
 
 //https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps#1-request-a-users-github-identity
-export class AUTH {
+export class GITHUB {
 
   static loginLink(GITHUB_REDIRECT, GITHUB_CLIENT_ID, state) {
     const url = new URL("https://github.com/login/oauth/authorize");
