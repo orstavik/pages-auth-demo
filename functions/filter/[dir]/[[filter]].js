@@ -33,7 +33,7 @@ const whitelist = {
   }
 };
 
-let filter;
+let contextProxy;
 
 async function asyncMutator(path, func, obj) {
   path = path.split(".");
@@ -45,7 +45,7 @@ async function asyncMutator(path, func, obj) {
 }
 
 export async function onRequest(context) {
-  filter ??= new ContextProxy({
+  contextProxy ??= new ContextProxy({
     ".request.url": v => new URL(v),
     ".request.url.searchParams": ContextProxy.parseSearchParams,
     ".request.headers": ContextProxy.wrapHeaderProxy,
@@ -54,15 +54,10 @@ export async function onRequest(context) {
     ".env.rights": JSON.parse,
     ".request.body": JSON.parse,
   });
-  context.state = filter.process(whitelist, context);
+  context.state = contextProxy.process(whitelist, context);
 
-  const path = "request.headers.cookie.id";
-  const decoder = Base64Token.decode.bind(null, context.env.SESSION_SECRET);  //todo this can be made into a HO function.
-  await asyncMutator(path, decoder, context.state);
-
-  // if (context.state.request.headers.cookie?.id)
-  //   context.state.request.headers.cookie.id =
-  //     await decodeBase64Token(context.env.SESSION_SECRET, context.state.request.headers.cookie.id);
+  await asyncMutator(
+    "request.headers.cookie.id", v => Base64Token.decode(context.env.SESSION_SECRET, v), context.state);
 
   return new Response(JSON.stringify(context.state, null, 2));
 }
