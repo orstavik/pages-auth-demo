@@ -10,7 +10,7 @@ export class ContextProxy {
       const func = this.paths[p];
       let o = obj[k];
       func && (o = func(o));
-      res[k] = v === 1 ? o ?? null : this.process(v, o, p);
+      res[k] = (v !== 1 && o ? this.process(v, o, p) : o) ?? null;
     }
     return res;
   }
@@ -27,11 +27,9 @@ export class ContextProxy {
     return Object.fromEntries(new URLSearchParams(v).entries());
   }
 
-  static parseCookie(cookieString) {
-    return Object.fromEntries(
-      cookieString.split(";").map(
-        p => p.split(/=(.+)/).map(s => s?.trim())
-      )
-    );
+  static parseCookie(cStr) {
+    return cStr ?
+      Object.fromEntries(cStr.split(";").map(p => p.split(/=(.+)/).map(s => s?.trim()))) :
+      null;
   }
 }
