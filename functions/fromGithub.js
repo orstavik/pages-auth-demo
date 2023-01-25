@@ -1,5 +1,5 @@
 import {AUTH, bakeCookie} from "./AUTH";
-import {decodeBase64Token, encodeBase64Token} from "./AES-GCM";
+import {Base64Token} from "./AES-GCM";
 
 
 export async function onRequest({request, env}) {
@@ -15,7 +15,7 @@ export async function onRequest({request, env}) {
   const code = params.get('code');
   const state = params.get('state');
   try {
-    const emptyBase64Token = await decodeBase64Token(STATE_SECRET, state);
+    const emptyBase64Token = await Base64Token.decode(STATE_SECRET, state);
   } catch (err) {
     return new Response('state error', {status: 500});
   }
@@ -25,7 +25,7 @@ export async function onRequest({request, env}) {
   const responseUserData = await AUTH.fetchUserData(data.access_token);
   const userData = await responseUserData.json();
 
-  const base64cookieToken = await encodeBase64Token(SESSION_SECRET, {
+  const base64cookieToken = await Base64Token.encode(SESSION_SECRET, {
     user: userData.login + "@github",
     ttl: SESSION_TTL,
     rights: "edit,admin", //todo this we need to get from the environment variables

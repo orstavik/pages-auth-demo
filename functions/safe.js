@@ -1,4 +1,4 @@
-import {decodeBase64Token} from "./AES-GCM";
+import {Base64Token} from "./AES-GCM";
 
 function parseCookie(cookieString) {
   return Object.fromEntries(cookieString.split(";").map(p => p.split(/=(.+)/).map(s => s?.trim())));
@@ -10,7 +10,7 @@ async function getAndValidateSessionCookie(request, key) {
     const cookies = parseCookie(cStr);
     if (cookies.id) {
       try {
-        return await decodeBase64Token(key, cookies.id);
+        return await Base64Token.decode(key, cookies.id);
       } catch (err) {
       }
     }

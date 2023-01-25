@@ -1,5 +1,5 @@
 import {ContextProxy} from "../../ContextProxy";
-import {decodeBase64Token} from "../../AES-GCM";
+import {Base64Token} from "../../AES-GCM";
 
 const whitelist = {
   request: {
@@ -35,6 +35,15 @@ const whitelist = {
 
 let filter;
 
+async function asyncMutator(path, func, obj) {
+  path = path.split(".");
+  const prop = path.pop();
+  while (obj && path.length)
+    obj = obj[path.shift()];
+  if (path.length === 0)
+    obj[prop] = await func(obj[prop]);
+}
+
 export async function onRequest(context) {
   filter ??= new ContextProxy({
     ".request.url": v => new URL(v),
@@ -47,9 +56,13 @@ export async function onRequest(context) {
   });
   context.state = filter.process(whitelist, context);
 
-  if (context.state.request.headers.cookie?.id)
-    context.state.request.headers.cookie.id =
-      await decodeBase64Token(context.env.SESSION_SECRET, context.state.request.headers.cookie.id);
+  const path = "request.headers.cookie.id";
+  const decoder = Base64Token.decode.bind(null, context.env.SESSION_SECRET);  //todo this can be made into a HO function.
+  await asyncMutator(path, decoder, context.state);
+
+  // if (context.state.request.headers.cookie?.id)
+  //   context.state.request.headers.cookie.id =
+  //     await decodeBase64Token(context.env.SESSION_SECRET, context.state.request.headers.cookie.id);
 
   return new Response(JSON.stringify(context.state, null, 2));
 }

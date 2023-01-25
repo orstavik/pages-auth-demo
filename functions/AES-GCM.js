@@ -28,47 +28,50 @@ export async function decode(cipherText, key) {
   return new TextDecoder().decode(payload);
 }
 
-//the dictionary object will be given a new iv, and new iat value
-//if no ttl is given in the dict, a default ttl = 10s/10000ms
-export async function encodeBase64Token(key, dict = {}) {
-  key = hashKey256(key);
-  if (key instanceof Promise)
-    key = await key;
-  dict.iat = new Date().getTime();
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  dict.iv64 = base64EncArr(iv);
-  dict.ttl ??= 10000;
-  const ab = new TextEncoder().encode(JSON.stringify(dict));
-  const cipher = await crypto.subtle.encrypt({name: "AES-GCM", iv}, key, ab);
-  return dict.iv64 + "." + base64EncArr(new Uint8Array(cipher));
-}
-
-export async function decodeBase64Token(key, cipherText) {
-  try {
+export class Base64Token {
+  static  async encode(key, dict = {}) {
     key = hashKey256(key);
     if (key instanceof Promise)
       key = await key;
-    if (!cipherText)
-      throw "bad cipherText.";
-    const [iv64, cipher64, err] = cipherText.split(".");
-    if (!iv64 || !cipher64 || err)
-      throw "bad cipherText.";
-    const uint8Array = await crypto.subtle.decrypt({
-      name: "AES-GCM",
-      iv: base64DecToArr(iv64)
-    }, key, base64DecToArr(cipher64));
-    const obj = JSON.parse(new TextDecoder().decode(uint8Array));
-    if (obj.iv64 !== iv64)
-      throw "bad iv.";
-    const now = new Date().getTime();
-    const age = Math.floor((now - obj.iat) / 1000);
-    if (age < 0 || age > obj.ttl)
-      throw `bad ttl. ttl=${obj.ttl} now=${now} iat=${obj.iat} age=${age}`;
-    return obj;
-  } catch (err) {
-    return null;//how do we want this to work?..
+    dict.iat = new Date().getTime();
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    dict.iv64 = base64EncArr(iv);
+    dict.ttl ??= 10000;
+    const ab = new TextEncoder().encode(JSON.stringify(dict));
+    const cipher = await crypto.subtle.encrypt({name: "AES-GCM", iv}, key, ab);
+    return dict.iv64 + "." + base64EncArr(new Uint8Array(cipher));
+  }
+
+  static async decode(key, cipherText) {
+    try {
+      key = hashKey256(key);
+      if (key instanceof Promise)
+        key = await key;
+      if (!cipherText)
+        throw "bad cipherText.";
+      const [iv64, cipher64, err] = cipherText.split(".");
+      if (!iv64 || !cipher64 || err)
+        throw "bad cipherText.";
+      const uint8Array = await crypto.subtle.decrypt({
+        name: "AES-GCM",
+        iv: base64DecToArr(iv64)
+      }, key, base64DecToArr(cipher64));
+      const obj = JSON.parse(new TextDecoder().decode(uint8Array));
+      if (obj.iv64 !== iv64)
+        throw "bad iv.";
+      const now = new Date().getTime();
+      const age = Math.floor((now - obj.iat) / 1000);
+      if (age < 0 || age > obj.ttl)
+        throw `bad ttl. ttl=${obj.ttl} now=${now} iat=${obj.iat} age=${age}`;
+      return obj;
+    } catch (err) {
+      return null;//how do we want this to work?..
+    }
   }
 }
+
+//the dictionary object will be given a new iv, and new iat value
+//if no ttl is given in the dict, a default ttl = 10s/10000ms
 
 // Unfortunately, atob/btoa in js doesn't work properly. So we need this method for converting between base64 and numbers/arrayBuffers. See:
 // https://developer.mozilla.org/en-US/docs/Glossary/Base64#solution_2_%E2%80%93_rewriting_atob_and_btoa_using_typedarrays_and_utf-8
