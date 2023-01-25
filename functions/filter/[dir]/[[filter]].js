@@ -37,16 +37,19 @@ let filter;
 
 export async function onRequest(context) {
   filter ??= new ContextProxy({
-      ".request.url": v => new URL(v),
-      ".request.url.searchParams": ContextProxy.parseSearchParams,
-      ".request.headers": ContextProxy.wrapHeaderProxy,
-      ".request.headers.cookie": ContextProxy.parseCookie,
+    ".request.url": v => new URL(v),
+    ".request.url.searchParams": ContextProxy.parseSearchParams,
+    ".request.headers": ContextProxy.wrapHeaderProxy,
+    ".request.headers.cookie": ContextProxy.parseCookie,
 
-      ".env.rights": JSON.parse,
-      ".request.body": JSON.parse,
-    });
+    ".env.rights": JSON.parse,
+    ".request.body": JSON.parse,
+  });
   context.state = filter.process(whitelist, context);
-  context.state.request.headers.cookie.id =
-    await decodeBase64Token(context.env.SESSION_SECRET, context.state.request.headers.cookie.id);
+
+  if (context.state.request.headers.cookie?.id)
+    context.state.request.headers.cookie.id =
+      await decodeBase64Token(context.env.SESSION_SECRET, context.state.request.headers.cookie.id);
+
   return new Response(JSON.stringify(context.state, null, 2));
 }
