@@ -78,7 +78,8 @@ function b64ToUint6(nChr) {
 }
 
 export function base64DecToArr(sBase64) {
-  sBase64 = sBase64.replace(/=+$/, "");
+  const l = sBase64.length;
+  sBase64 = sBase64.substring(0, l - (sBase64[l-2] === "=" ? 2 : sBase64[l-1] === "=" ? 1 : 0))
   const taBytes = new Uint8Array((sBase64.length * 3 + 1) >> 2);
   let nMod3, nMod4, nUint24 = 0, nOutIdx = 0;
   for (let nInIdx = 0; nInIdx < sBase64.length; nInIdx++) {
