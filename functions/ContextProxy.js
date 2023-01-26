@@ -2,10 +2,10 @@
 //new Promises to the input array after it has been called.
 //If this is wrong, this is unnecessary, then we can just remove it.
 async function Promise_AllDynamic(ps) {
-  const length = ps.length;
-  await Promise.all(ps);
-  if (length > ps.length)
-    await Promise_AllDynamic(ps);
+  for (let i = 0; i < ps.length;) {
+    i = ps.length;
+    await Promise.all(ps);
+  }
 }
 
 export class ContextProxy {
@@ -13,14 +13,14 @@ export class ContextProxy {
     this.paths = Object.assign({}, ...paths);
   }
 
-  superFilter(filter, obj) {
-    const promises = [];
-    const res = this.filter(filter, obj, "", promises);
-    return promises.length ? Promise_AllDynamic(promises).then(_ => res) : res;
+  filter(filter, obj) {
+    const awaits = [];
+    const res = this.#filterImpl(filter, obj, "", awaits);
+    return awaits.length ? Promise_AllDynamic(awaits).then(_ => res) : res;
   }
 
 
-  filter(filter, obj, path = "", promises) {
+  #filterImpl(filter, obj, path = "", awaits) {
     const res = {};
     for (let [k, v] of Object.entries(filter)) {
       const p = `${path}.${k}`;
@@ -28,12 +28,10 @@ export class ContextProxy {
       let o = obj[k];
       func && (o = func(o));
       if (o instanceof Promise) {
-        promises.push(o);
-        o.then(o =>
-          res[k] = (!(v !== 1 && o) ? o : this.filter(v, o, p, promises)) ?? null
-        );
+        awaits.push(o);
+        o.then(o => res[k] = (!(v !== 1 && o) ? o : this.#filterImpl(v, o, p, awaits)) ?? null);
       } else
-        res[k] = (!(v !== 1 && o) ? o : this.filter(v, o, p, promises)) ?? null;
+        res[k] = (!(v !== 1 && o) ? o : this.#filterImpl(v, o, p, awaits)) ?? null;
     }
     return res;
   }

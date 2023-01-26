@@ -47,7 +47,7 @@ export async function onRequest(context) {
     ".request.body": JSON.parse,
   });
 
-  context.state = contextProxy.superFilter(whitelist, context);
+  context.state = contextProxy.filter(whitelist, context);
   if(context.state instanceof Promise)
     context.state = await context.state;
 
