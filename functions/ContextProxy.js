@@ -19,7 +19,6 @@ export class ContextProxy {
     return awaits.length ? Promise_AllDynamic(awaits).then(_ => res) : res;
   }
 
-
   #filterImpl(filter, obj, path = "", awaits) {
     const res = {};
     for (let [k, v] of Object.entries(filter)) {

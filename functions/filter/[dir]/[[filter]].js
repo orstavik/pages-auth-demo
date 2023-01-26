@@ -1,5 +1,4 @@
-import {ContextProxy} from "../../ContextProxy";
-import {Base64Token} from "../../AES-GCM";
+import {appContext} from "../../APP";
 
 const whitelist = {
   request: {
@@ -32,22 +31,11 @@ const whitelist = {
     rights: 1
   }
 };
-                          //todo this contextProxy should wrapped in a class.
-let contextProxy;
+let proxy;
 
 export async function onRequest(context) {
-  contextProxy ??= new ContextProxy({
-    ".request.url": ContextProxy.parseUrl,
-    ".request.url.searchParams": ContextProxy.parseSearchParams,
-    ".request.headers": ContextProxy.wrapHeaderProxy,
-    ".request.headers.cookie": ContextProxy.parseCookie,
-
-    ".request.headers.cookie.id": Base64Token.makeCachingDecoder(context.env.SESSION_SECRET),
-    ".env.rights": JSON.parse,
-    ".request.body": JSON.parse,
-  });
-
-  context.state = contextProxy.filter(whitelist, context);
+  proxy ??= appContext(context);
+  context.state = proxy.filter(whitelist, context);
   if(context.state instanceof Promise)
     context.state = await context.state;
 

@@ -1,25 +1,22 @@
-import {Base64Token} from "./AES-GCM";
+import {appContext} from "./APP";
 
-function parseCookie(cookieString) {
-  return Object.fromEntries(cookieString.split(";").map(p => p.split(/=(.+)/).map(s => s?.trim())));
-}
-
-async function getAndValidateSessionCookie(request, key) {
-  const cStr = request.headers.get("Cookie");
-  if (cStr) {
-    const cookies = parseCookie(cStr);
-    if (cookies.id) {
-      try {
-        return await Base64Token.decode(key, cookies.id);
-      } catch (err) {
+const whitelist = {
+  request: {
+    headers: {
+      cookie: {
+        id: 1
       }
     }
   }
 }
 
-export async function onRequest({request, env: {SESSION_SECRET}}) {
-  const cookieAsObj = await getAndValidateSessionCookie(request, SESSION_SECRET);
-  if (cookieAsObj)
-    return new Response("Safe, cookie content: " + JSON.stringify(cookieAsObj, null, 2), {status: 200});
-  return Response.redirect(new URL("/login", request.url));
+let proxy;
+export async function onRequest(context) {
+  proxy ??= appContext(context);
+  context.state = proxy.filter(whitelist, context);
+  context.state instanceof Promise && (context.state = await context.state);
+  const session = context.state?.request?.headers?.cookie?.id;
+  if (!session)
+    return Response.redirect(new URL("/login", context.request.url));
+  return new Response("Safe, cookie content: " + JSON.stringify(session, null, 2), {status: 200});
 }
