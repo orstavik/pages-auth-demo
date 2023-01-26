@@ -3,14 +3,14 @@ export class ContextProxy {
     this.paths = Object.assign({}, ...paths);
   }
 
-  process(filter, obj, path = "") {
+  filter(filter, obj, path = "") {
     const res = {};
     for (let [k, v] of Object.entries(filter)) {
       const p = `${path}.${k}`;
       const func = this.paths[p];
       let o = obj[k];
       func && (o = func(o));
-      res[k] = (v !== 1 && o ? this.process(v, o, p) : o) ?? null;
+      res[k] = (!(v !== 1 && o) ? o : this.filter(v, o, p)) ?? null;
     }
     return res;
   }
