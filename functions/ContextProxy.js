@@ -25,8 +25,7 @@ export class ContextProxy {
     for (let [k, v] of Object.entries(filter)) {
       const p = `${path}.${k}`;
       const func = this.paths[p];
-      let o = obj[k];
-      func && (o = func(o));
+      const o = func ? func(obj[k]) : obj[k];
       if (o instanceof Promise) {
         awaits.push(o);
         o.then(o => res[k] = (!(v !== 1 && o) ? o : this.#filterImpl(v, o, p, awaits)) ?? null);
@@ -52,5 +51,9 @@ export class ContextProxy {
     return cStr ?
       Object.fromEntries(cStr.split(";").map(p => p.split(/=(.+)/).map(s => s?.trim()))) :
       null;
+  }
+
+  static parseUrl(str) {
+    return new URL(str);
   }
 }

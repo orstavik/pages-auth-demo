@@ -37,12 +37,12 @@ let contextProxy;
 
 export async function onRequest(context) {
   contextProxy ??= new ContextProxy({
-    ".request.url": v => new URL(v),
+    ".request.url": ContextProxy.parseUrl,
     ".request.url.searchParams": ContextProxy.parseSearchParams,
     ".request.headers": ContextProxy.wrapHeaderProxy,
     ".request.headers.cookie": ContextProxy.parseCookie,
 
-    ".request.headers.cookie.id": Base64Token.decoder(context.env.SESSION_SECRET),
+    ".request.headers.cookie.id": Base64Token.makeCachingDecoder(context.env.SESSION_SECRET),
     ".env.rights": JSON.parse,
     ".request.body": JSON.parse,
   });
