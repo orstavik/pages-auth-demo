@@ -32,31 +32,25 @@ const whitelist = {
     rights: 1
   }
 };
-
-const contextProxy = new ContextProxy({
-  ".request.url": v => new URL(v),
-  ".request.url.searchParams": ContextProxy.parseSearchParams,
-  ".request.headers": ContextProxy.wrapHeaderProxy,
-  ".request.headers.cookie": ContextProxy.parseCookie,
-
-  ".env.rights": JSON.parse,
-  ".request.body": JSON.parse,
-});
-
-async function asyncMutator(path, func, obj) {
-  path = path.split(".");
-  const prop = path.pop();
-  while (obj && path.length)
-    obj = obj[path.shift()];
-  if (path.length === 0)
-    obj[prop] = await func(obj[prop]);
-}
+                          //todo this contextProxy should wrapped in a class.
+let contextProxy;
 
 export async function onRequest(context) {
-  context.state = contextProxy.filter(whitelist, context);
+  contextProxy ??= new ContextProxy({
+    ".request.url": v => new URL(v),
+    ".request.url.searchParams": ContextProxy.parseSearchParams,
+    ".request.headers": ContextProxy.wrapHeaderProxy,
+    ".request.headers.cookie": ContextProxy.parseCookie,
 
-  await asyncMutator(
-    "request.headers.cookie.id", v => Base64Token.decode(context.env.SESSION_SECRET, v), context.state);
+    ".request.headers.cookie.id": Base64Token.decoder(context.env.SESSION_SECRET),
+    ".env.rights": JSON.parse,
+    ".request.body": JSON.parse,
+  });
+
+  context.state = contextProxy.superFilter(whitelist, context);
+  if(context.state instanceof Promise)
+    context.state = await context.state;
+
   //todo the rights are added in the cookie inside the fromGithub/fromGoogle endpoints.
   //todo check the auth. Is there an unwrapped cookie with data? does the cookie.id.rights include the current path? If this is not the case, then a redirect to login.
 

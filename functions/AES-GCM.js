@@ -29,14 +29,14 @@ export async function decode(cipherText, key) {
 }
 
 export class Base64Token {
-  static  async encode(key, dict = {}) {
+  static async encode(key, dict = {}) {
     key = hashKey256(key);
     if (key instanceof Promise)
       key = await key;
     dict.iat = new Date().getTime();
     const iv = crypto.getRandomValues(new Uint8Array(12));
     dict.iv64 = base64EncArr(iv);
-    dict.ttl ??= 10000;
+    dict.ttl ??= 10;
     const ab = new TextEncoder().encode(JSON.stringify(dict));
     const cipher = await crypto.subtle.encrypt({name: "AES-GCM", iv}, key, ab);
     return dict.iv64 + "." + base64EncArr(new Uint8Array(cipher));
@@ -68,10 +68,22 @@ export class Base64Token {
       return null;//how do we want this to work?..
     }
   }
+
+  static #c = {};
+
+  static decoder(key) {
+    return function (cipherText) {
+      return Base64Token.#c[cipherText] ??
+        Base64Token.decode(key, cipherText).then(obj => Base64Token.#c[cipherText] = deepFreeze(obj));
+    }
+  }
 }
 
-//the dictionary object will be given a new iv, and new iat value
-//if no ttl is given in the dict, a default ttl = 10s/10000ms
+function deepFreeze(obj){
+  for (let prop in obj)
+    obj[prop] instanceof Object && deepFreeze(obj[prop]);
+  return Object.freeze(obj);
+}
 
 // Unfortunately, atob/btoa in js doesn't work properly. So we need this method for converting between base64 and numbers/arrayBuffers. See:
 // https://developer.mozilla.org/en-US/docs/Glossary/Base64#solution_2_%E2%80%93_rewriting_atob_and_btoa_using_typedarrays_and_utf-8
@@ -82,7 +94,7 @@ function b64ToUint6(nChr) {
 
 export function base64DecToArr(sBase64) {
   const l = sBase64.length;
-  sBase64 = sBase64.substring(0, l - (sBase64[l-2] === "=" ? 2 : sBase64[l-1] === "=" ? 1 : 0))
+  sBase64 = sBase64.substring(0, l - (sBase64[l - 2] === "=" ? 2 : sBase64[l - 1] === "=" ? 1 : 0))
   const taBytes = new Uint8Array((sBase64.length * 3 + 1) >> 2);
   let nMod3, nMod4, nUint24 = 0, nOutIdx = 0;
   for (let nInIdx = 0; nInIdx < sBase64.length; nInIdx++) {
