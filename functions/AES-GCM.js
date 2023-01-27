@@ -74,13 +74,13 @@ export class Base64Token {
   static cachingDecoder(key, maxCacheEntries = 1000) {
     const c = Base64Token.#c[key] ?? (Base64Token.#c[key] = {});
     return function (cipherText) {
-      return c[cipherText] ??
+      return !cipherText ? null : c[cipherText] ??
         Base64Token.decode(key, cipherText).then(obj => {
           const keys = Object.keys(c);             //todo untested
           if (keys.length > maxCacheEntries)       //todo untested
             for (let i = 0; i < 10; i++)           //todo untested
               delete c[keys[i]];                   //todo untested
-          return c[cipherText] = deepFreeze(obj);
+          return c[cipherText] = obj ? deepFreeze(obj) : obj;
         });
     }
   }
