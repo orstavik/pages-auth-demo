@@ -20,6 +20,7 @@ export class ContextProxy {
   }
 
   #filterImpl(filter, obj, path = "", awaits) {
+    obj ??= {};
     const res = {};
     for (let [k, v] of Object.entries(filter)) {
       const p = `${path}.${k}`;
@@ -27,9 +28,9 @@ export class ContextProxy {
       const o = func ? func(obj[k]) : obj[k];
       if (o instanceof Promise) {
         awaits.push(o);
-        o.then(o => res[k] = (!(v !== 1 && o) ? o : this.#filterImpl(v, o, p, awaits)) ?? null);
+        o.then(o => res[k] = v === 1 ? o ?? null : this.#filterImpl(v, o, p, awaits));
       } else
-        res[k] = (!(v !== 1 && o) ? o : this.#filterImpl(v, o, p, awaits)) ?? null;
+        res[k] = v === 1 ? o ?? null : this.#filterImpl(v, o, p, awaits);
     }
     return res;
   }
