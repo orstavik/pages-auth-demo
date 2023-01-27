@@ -35,10 +35,8 @@ const whitelist = {
 let proxy;
 
 export async function onRequest(context) {
-  proxy ??= appContext(context.env.SESSION_SECRET);
-  context.state = proxy.filter(whitelist, context);
-  if(context.state instanceof Promise)
-    context.state = await context.state;
+  let state = (proxy ??= appContext(context.env.SESSION_SECRET)).filter(whitelist, context);
+  state instanceof Promise && (state = await state);
 
   //todo the rights are added in the cookie inside the fromGithub/fromGoogle endpoints.
   //todo check the auth. Is there an unwrapped cookie with data? does the cookie.id.rights include the current path? If this is not the case, then a redirect to login.
@@ -55,5 +53,5 @@ export async function onRequest(context) {
 
   //todo then convert the response body and return it
 
-  return new Response(JSON.stringify(context.state, null, 2));
+  return new Response(JSON.stringify(state, null, 2));
 }
