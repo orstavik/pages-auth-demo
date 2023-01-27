@@ -1,6 +1,7 @@
 import {appContext} from "../../APP";
 
 const whitelist = {
+  timeStamp: 1,
   request: {
     method: 1,
     url: {
@@ -34,7 +35,7 @@ const whitelist = {
 let proxy;
 
 export async function onRequest(context) {
-  proxy ??= appContext(context);
+  proxy ??= appContext(context.env.SESSION_SECRET);
   context.state = proxy.filter(whitelist, context);
   if(context.state instanceof Promise)
     context.state = await context.state;
