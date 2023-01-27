@@ -5,7 +5,11 @@ import {appContext} from "./APP";
 const whitelist = {
   timeStamp: 1,
   request: {
+    headers: {
+      "CF-Connecting-IP": 1
+    },
     url: {
+      hostname: 1,
       searchParams: {
         state: 1,
         code: 1
@@ -32,8 +36,8 @@ export async function onRequest(context) {
     }
   } = context;
   const {code, state: stateParam} = state.request.url.searchParams;
-    const emptyBase64Token = await Base64Token.decode(STATE_SECRET, stateParam);
-  if(!emptyBase64Token)
+  const emptyBase64Token = await Base64Token.decode(STATE_SECRET, stateParam);
+  if (!emptyBase64Token)
     return new Response('state error', {status: 500});
 
   const responseAccessToken = await GITHUB.fetchAccessToken(code, GITHUB_CLIENT_ID, GITHUB_REDIRECT, GITHUB_CLIENT_SECRET, stateParam);
@@ -45,10 +49,10 @@ export async function onRequest(context) {
     user: userData.login + "@github",
     ttl: SESSION_TTL,
     rights: "edit,admin", //todo this we need to get from the environment variables
-    ip: request.headers.get("CF-Connecting-IP")
+    ip: state.request.headers["CF-Connecting-IP"]
   });
   const response = Response.redirect(new URL("/", request.url));
   response.headers.set("Set-Cookie",
-    bakeCookie("id", base64cookieToken, new URL(request.url).hostname, SESSION_TTL));
+    bakeCookie("id", base64cookieToken, state.request.url.hostname, SESSION_TTL));
   return response;
 }
