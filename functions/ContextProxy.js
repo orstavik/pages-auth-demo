@@ -9,8 +9,8 @@ async function Promise_AllDynamic(ps) {
 }
 
 export class ContextProxy {
-  constructor(...paths) {
-    this.paths = Object.assign({}, ...paths);
+  constructor(specialGetters) {
+    this.specialGetters = specialGetters;
   }
 
   filter(filter, obj) {
@@ -24,7 +24,7 @@ export class ContextProxy {
     const res = {};
     for (let [k, v] of Object.entries(filter)) {
       const p = `${path}.${k}`;
-      const func = this.paths[p];
+      const func = this.specialGetters[p];
       const o = func ? func(obj[k]) : obj[k];
       if (o instanceof Promise) {
         awaits.push(o);
