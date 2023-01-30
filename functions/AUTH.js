@@ -18,11 +18,11 @@ export class GITHUB {
     return url.href;
   }
 
-  static fetchAccessToken(code, client_id, redirect_uri, client_secret, state) {
+  static fetchAccessToken(code, client_id, redirect_uri, client_secret) {
     return fetch('https://github.com/login/oauth/access_token', {
       method: 'POST',
       headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-      body: JSON.stringify({code, client_id, client_secret, redirect_uri, state})
+      body: JSON.stringify({code, client_id, client_secret, redirect_uri})
     });
   }
 
