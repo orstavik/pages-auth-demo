@@ -1,6 +1,6 @@
 import {GITHUB, bakeCookie} from "./AUTH";
 import {Base64Token} from "./AES-GCM";
-import {appContext} from "./APP";
+import {appContext2} from "./APP";
 
 const whitelist = {
   timeStamp: 1,
@@ -23,21 +23,19 @@ const whitelist = {
 let proxy;
 
 export async function onRequest(context) {
-  let state = (proxy ??= appContext(context.env.SESSION_SECRET)).filter(whitelist, context);
+  let state = (proxy ??= appContext2(context.env)).filter(whitelist, context);
   state instanceof Promise && (state = await state);
   const {
     request, env: {
       GITHUB_CLIENT_ID,
       GITHUB_REDIRECT,
       GITHUB_CLIENT_SECRET,
-      STATE_SECRET,
       SESSION_SECRET,
       SESSION_TTL
     }
   } = context;
   const {code, state: stateParam} = state.request.url.searchParams;
-  const emptyBase64Token = await Base64Token.decode(STATE_SECRET, stateParam);
-  if (!emptyBase64Token)
+  if (!stateParam)
     return new Response('state error', {status: 500});
 
   const responseAccessToken = await GITHUB.fetchAccessToken(code, GITHUB_CLIENT_ID, GITHUB_REDIRECT, GITHUB_CLIENT_SECRET, stateParam);
