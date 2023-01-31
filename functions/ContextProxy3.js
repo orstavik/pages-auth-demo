@@ -17,31 +17,29 @@ function specialGetterChain(paths, context, dict, i = 0) {
   return obj;
 }
 
-function makeHoFilter(filter, specialGetters) {
-  for (let [k, child] of Object.entries(filter)) {
-    if (child instanceof String || typeof child === "string")
-      filter[k] = specialGetterChain.bind(null, makePaths(child, specialGetters));
-    else if (child instanceof Object)
-      makeHoFilter(child, specialGetters);
-    else
-      throw new Error("error in whitelist format, must be either string or object");
-  }
-  return filter;
+function convertGetters(filter, specialGetters) {
+  return Object.fromEntries(Object.entries(filter).map(([k, v]) =>
+    [k,
+      v instanceof String || typeof v === "string" ?
+        specialGetterChain.bind(null, makePaths(v, specialGetters)) :
+        convertGetters(v, specialGetters)
+    ]));
 }
 
 export class ContextProxy2 {
+  #filter;
+
   constructor(specialGetters, filter) {
-    this.hoFilter = makeHoFilter(filter, specialGetters);
+    this.#filter = convertGetters(filter, specialGetters);
   }
 
-  filter3(obj) {
-    const dict = {};
+  filter(root) {
     const awaits = [];
-    const res = this.filter3Impl(this.hoFilter, obj, dict, awaits);
+    const res = this.#filterImpl(this.#filter, root, awaits);
     return awaits.length ? Promise.all(awaits).then(_ => res) : res;
   }
 
-  filter3Impl(filter, obj, dict, awaits) {
+  #filterImpl(filter, obj, awaits, dict = {}) {
     const res = {};
     for (let [k, v] of Object.entries(filter)) {
       if (v instanceof Function) {
@@ -49,7 +47,7 @@ export class ContextProxy2 {
         if (res[k] instanceof Promise)
           awaits.push(res[k]), res[k].then(v => res[k] = v);
       } else
-        res[k] = this.filter3Impl(v, obj, dict, awaits);
+        res[k] = this.#filterImpl(v, obj, awaits, dict);
     }
     return res;
   }

@@ -17,7 +17,7 @@ const whitelist2 = {
 let proxy;
 
 export async function onRequest(context) {
-  let state2 = (proxy ??= appContext3(context.env, whitelist2)).filter3(context);
+  let state2 = (proxy ??= appContext3(context.env, whitelist2)).filter(context);
   state2 instanceof Promise && (state2 = await state2);
 
   return new Response(JSON.stringify(state2, null, 2));

@@ -53,8 +53,8 @@ export class ContextProxy {
         } else {
           res[k] = null;
         }
-      } else if(v instanceof Object){
-        res[k] = this.extract(filter[k], obj[k]);
+      } else if (v instanceof Object) {
+        res[k] = this.extract(filter[k], obj);
       } else {
         res[k] = null;
       }
