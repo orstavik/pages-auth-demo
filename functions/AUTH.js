@@ -18,7 +18,7 @@ export class GITHUB {
     return url.href;
   }
 
-  static fetchAccessToken(code, client_id, redirect_uri, client_secret) {
+  static #fetchAccessToken(code, client_id, redirect_uri, client_secret) {
     return fetch('https://github.com/login/oauth/access_token', {
       method: 'POST',
       headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
@@ -26,7 +26,13 @@ export class GITHUB {
     });
   }
 
-  static fetchUserData(accessToken) {
+  static async accessToken(code, client_id, redirect_uri, client_secret) {
+    const resp = await this.#fetchAccessToken(code, client_id, redirect_uri, client_secret);
+    const data = await resp.json();
+    return data.access_token;
+  }
+
+  static #fetchUserData(accessToken) {
     return fetch('https://api.github.com/user', {
       headers: {
         'Authorization': 'token ' + accessToken,
@@ -34,6 +40,12 @@ export class GITHUB {
         'Accept': 'application/vnd.github.v3+json'
       }
     });
+  }
+
+  static async user(accessToken) {
+    const resp = await this.#fetchUserData(accessToken);
+    const userData = await resp.json();
+    return userData.login + "@github";
   }
 }
 
@@ -50,6 +62,7 @@ export class GOOGLE {
     });
     return url.href;
   }
+
   static async getUserData(code, GOOGLE_CODE_LINK, GOOGLE_CLIENT_ID, GOOGLE_REDIRECT, GOOGLE_CLIENT_SECRET) {
     const tokenPackage = await fetch(GOOGLE_CODE_LINK, {
       method: 'POST',

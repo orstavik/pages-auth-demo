@@ -1,4 +1,5 @@
 import {appContext} from "../../APP";
+import {ContextProxy} from "../../ContextProxy";
 
 const whitelist = {
   timeStamp: 1,
@@ -29,6 +30,7 @@ const whitelist = {
   functionPath: 1,
   params: 1,
   env: {
+    SESSION_TTL: 1,
     rights: 1
   }
 };
@@ -37,6 +39,14 @@ let proxy;
 export async function onRequest(context) {
   let state = (proxy ??= appContext(context.env.SESSION_SECRET)).filter(whitelist, context);
   state instanceof Promise && (state = await state);
+
+  state.now = ContextProxy.extract({
+    ip: "request.headers.cf-connecting-ip",
+    ttl: "env.SESSION_TTL",
+    iat: "timeStamp",
+    // user: ".user",
+    // rights: ".state.env.rights"
+  }, state);
 
   //todo the rights are added in the cookie inside the fromGithub/fromGoogle endpoints.
   //todo check the auth. Is there an unwrapped cookie with data? does the cookie.id.rights include the current path? If this is not the case, then a redirect to login.

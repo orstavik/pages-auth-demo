@@ -35,6 +35,33 @@ export class ContextProxy {
     return res;
   }
 
+  static extract(filter, obj) {
+    const res = {};
+    for (let [k, v] of Object.entries(filter)) {
+      if (v instanceof String || typeof v === "string") {
+        const path = v.split(".");
+        const prop = path.pop();
+        let o = obj;
+        for (let p of path) {
+          if (o === null)
+            break;
+          o = o[p];
+        }
+        if (o instanceof Object) {
+          res[k] = o[prop];
+          delete o[prop];
+        } else {
+          res[k] = null;
+        }
+      } else if(v instanceof Object){
+        res[k] = this.extract(filter[k], obj[k]);
+      } else {
+        res[k] = null;
+      }
+    }
+    return res;
+  }
+
   static wrapHeaderProxy(v) {
     return new Proxy(v, {
       get(target, key) {
