@@ -1,9 +1,8 @@
 import {appContext3} from "../../APP";
 
-//todo how to deal with lower case letters?
 const whitelist2 = {
   now: {
-    ip: "request.headers.CF-Connecting-IP",
+    ip: "request.headers.cf-connecting-ip",
     iat: "timeStamp",
     ttl: "env.SESSION_TTL"
   },
@@ -17,8 +16,9 @@ const whitelist2 = {
 let proxy;
 
 export async function onRequest(context) {
-  let state2 = (proxy ??= appContext3(context.env, whitelist2)).filter(context);
-  state2 instanceof Promise && (state2 = await state2);
+  proxy ??= appContext3(context.env, whitelist2);
+  let state = proxy.filter(context);
+  state instanceof Promise && (state = await state);
 
-  return new Response(JSON.stringify(state2, null, 2));
+  return new Response(JSON.stringify(state, null, 2));
 }
