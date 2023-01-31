@@ -2,7 +2,10 @@ import {appContext} from "./APP";
 
 const whitelist = {
   request: {
-    url: 1,
+    url: {
+      href: 1,
+      pathname: 1
+    },
     headers: {
       cookie: {
         id: 1
@@ -23,10 +26,9 @@ const redirectResponse = [
 
 let proxy;
 
-function redirectWhenNoSession(session) {
-  if (session)         //and the session has the rights to this base
-    return;
-  return redirectResponse;
+function redirectWhenNoSession(session, location) {
+  if (session?.rights.indexOf(location.split("/")[1]) < 0)
+    return redirectResponse;
 }
 
 export async function onRequest(context) {
@@ -35,7 +37,7 @@ export async function onRequest(context) {
   state instanceof Promise && (state = await state);
 
   //2. check that there is a valid session.
-  state.response = redirectWhenNoSession(state.request.headers.cookie.id);
+  state.response = redirectWhenNoSession(state.request.headers.cookie.id, state.request.url.pathname);
 
   //3. if the state.response is still open for business, then add the body
   state.response ??= [JSON.stringify(state, null, 2)];
