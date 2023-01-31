@@ -7,7 +7,7 @@ const whitelist = {
   timeStamp: 1,                      //
   request: {
     headers: {                         //
-      "CF-Connecting-IP": 1            //
+      "cf-connecting-ip": 1            //
     },                                 //
     url: {
       hostname: 1,
@@ -21,11 +21,6 @@ const whitelist = {
   env: {
     rights: 1,
     SESSION_TTL: 1                   //
-  // },
-  // now: {
-  //   ip: "request.headers.CF-Connecting-IP",
-  //   iat: "timeStamp",
-  //   ttl: "env.SESSION_TTL"
   }
 };
 let proxy;
