@@ -6,19 +6,13 @@ function makePaths(child, specialGetters) {
   });
 }
 
-function getStrangePath(paths, context, dict, i = 0) {
+function specialGetterChain(paths, context, dict, i = 0) {
   let obj = context;
   for (; obj && i < paths.length; i++) {
     const {prop, path, sGetter} = paths[i];
-    if (!(path in dict))
-      dict[path] = sGetter ? sGetter(obj[prop]) : obj[prop];
-    obj = dict[path];
-    if (obj instanceof Promise) {
-      return obj.then(obj => {
-        dict[path] = obj;
-        return getStrangePath(paths, context, dict, i++);
-      });
-    }
+    obj = path in dict ? dict[path] : dict[path] = sGetter ? sGetter(obj[prop]) : obj[prop];
+    if (obj instanceof Promise)
+      return obj.then(obj => (dict[path] = obj, specialGetterChain(paths, context, dict, i++)));
   }
   return obj;
 }
@@ -26,7 +20,7 @@ function getStrangePath(paths, context, dict, i = 0) {
 function makeHoFilter(filter, specialGetters) {
   for (let [k, child] of Object.entries(filter)) {
     if (child instanceof String || typeof child === "string")
-      filter[k] = getStrangePath.bind(null, makePaths(child, specialGetters));
+      filter[k] = specialGetterChain.bind(null, makePaths(child, specialGetters));
     else if (child instanceof Object)
       makeHoFilter(child, specialGetters);
     else
@@ -47,18 +41,15 @@ export class ContextProxy2 {
     return awaits.length ? Promise.all(awaits).then(_ => res) : res;
   }
 
-  filter3Impl(filter,  obj, dict, awaits) {
+  filter3Impl(filter, obj, dict, awaits) {
     const res = {};
     for (let [k, v] of Object.entries(filter)) {
       if (v instanceof Function) {
         res[k] = v(obj, dict);
-        if (res[k] instanceof Promise) {
-          awaits.push(res[k]);
-          res[k].then(v => res[k] = v);
-        }
-      } else {
+        if (res[k] instanceof Promise)
+          awaits.push(res[k]), res[k].then(v => res[k] = v);
+      } else
         res[k] = this.filter3Impl(v, obj, dict, awaits);
-      }
     }
     return res;
   }
