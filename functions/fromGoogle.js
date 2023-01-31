@@ -1,55 +1,46 @@
 import {bakeCookie, GOOGLE} from "./AUTH";
 import {Base64Token} from "./AES-GCM";
-import {appContext2} from "./APP";
+import {appContext3} from "./APP";
 
-const whitelist = {
-  timeStamp: 1,
-  request: {
-    headers: {
-      "CF-Connecting-IP": 1
-    },
-    url: {
-      href: 1,
-      hostname: 1,
-      searchParams: {
-        code: 1,
-        state: 1
-      }
-    }
+const whitelist2 = {
+  now: {
+    ip: "request.headers.cf-connecting-ip",
+    iat: "timeStamp",
+    ttl: "env.SESSION_TTL"                     //todo move this out of now.
   },
-  env: {
-    rights: 1
-  }
-}
-
+  url: "request.url.href",
+  pathname: "request.url.pathname",
+  hostname: "request.url.hostname",
+  session: "request.headers.cookie.id",
+  state: "request.url.searchParams.state",
+  code: "request.url.searchParams.code",
+  rights: "env.rights"
+};
 let proxy;
 
 export async function onRequest(context) {
-  let state = (proxy ??= appContext2(context.env)).filter(whitelist, context);
+  proxy ??= appContext3(context.env, whitelist2);
+  let state = proxy.filter(context);
   state instanceof Promise && (state = await state);
 
-  const {
-    GOOGLE_CLIENT_ID,
-    GOOGLE_CODE_LINK,
-    GOOGLE_REDIRECT,
-    GOOGLE_CLIENT_SECRET,
-    SESSION_SECRET,
-    SESSION_TTL
-  } = context.env;
-  const {code, state: stateParam} = state.request.url.searchParams;
-  if (!stateParam)
+  if (!state.state)
     return new Response('state error', {status: 500});
 
-  const payload = await GOOGLE.getUserData(code, GOOGLE_CODE_LINK, GOOGLE_CLIENT_ID, GOOGLE_REDIRECT, GOOGLE_CLIENT_SECRET, 'authorization_code');
+  const payload = await GOOGLE.getUserData(
+    state.code,
+    context.env.GOOGLE_CODE_LINK,
+    context.env.GOOGLE_CLIENT_ID,
+    context.env.GOOGLE_REDIRECT,
+    context.env.GOOGLE_CLIENT_SECRET,
+    'authorization_code'      //todo move this inside the getUserData()
+  );
 
-  const base64cookieToken = await Base64Token.encode(SESSION_SECRET, {
-    user: payload.email,
-    rights: state.env.rights[payload.email],
-    ip: state.request.headers["CF-Connecting-IP"],
-    ttl: SESSION_TTL
-  });
-  const response = Response.redirect(new URL("/", state.request.url.href));
+  const user = state.now.user = payload.email;              //get the user
+  state.now.rights = state.rights[user];                    //todo redactive filtering?
+
+  const base64cookieToken = await Base64Token.encode(context.env.SESSION_SECRET, state.now);
+  const response = Response.redirect(new URL("/", state.url));
   response.headers.set("Set-Cookie",
-    bakeCookie("id", base64cookieToken, state.request.url.hostname, SESSION_TTL));
+    bakeCookie("id", base64cookieToken, state.hostname, state.ttl));
   return response;
 }

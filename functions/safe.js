@@ -1,4 +1,4 @@
-import {appContext, appContext3} from "./APP";
+import {appContext3} from "./APP";
 
 const redirectResponse = [
   "Unauthorized",
@@ -11,7 +11,7 @@ const redirectResponse = [
 ];
 
 function redirectWhenNoSession(session, location) {
-  if (session?.rights.indexOf(location.split("/")[1]) < 0)
+  if (!session || !session.rights || session.rights.indexOf(location.split("/")[1]) < 0)
     return redirectResponse;
 }
 

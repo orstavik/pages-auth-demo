@@ -52,6 +52,6 @@ export function appContext3({SESSION_SECRET, STATE_SECRET}, filter) {
     //fromOAuth server specific
     "request.url.searchParams.state": v => Base64Token.decode(STATE_SECRET, v),
     //todo test
-    "request": ContextProxy2.sleeper
+    // "request": ContextProxy2.sleeper
   }, filter);
 }
