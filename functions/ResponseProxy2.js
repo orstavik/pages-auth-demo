@@ -10,23 +10,19 @@ function getPropFill(obj, path) {
   return obj;
 }
 
-function getParents(obj, path) {
-  return path.map(p => obj = obj[p]);
-}
-
-function normalizeFilter2(filter) {
+function normalizeFilter2(filter, functions) {
   const res = {};
-  const funcs = new Map();
   const values = new Map();
   for (let [k, v] of Object.entries(filter)) {
     const resPath = k.split(".");
     const obj = getPropFill(res, resPath);
-    if (v instanceof Array)
-      values.set(obj, v[0].split(".")), funcs.set(obj, v[1]);
-    else if (v instanceof Function)
-      funcs.set(obj, v);
-    else
-      values.set(obj, v.split("."));
+    values.set(obj, v.split("."));
+  }
+  const funcs = new Map();
+  for (let [k, v] of Object.entries(functions)) {
+    const resPath = k.split(".");
+    const obj = getPropFill(res, resPath);
+    funcs.set(obj, v);
   }
   return {res, funcs, values};
 }
@@ -46,20 +42,20 @@ function getValues2(parent, key, filter, state, funcs, values) {
   parent[key] = res;
 }
 
-function cleanEmptyBranches(obj){
+function cleanEmptyBranches(obj) {
   for (let [key, val] of Object.entries(obj)) {
-    if(val instanceof  Object){
+    if (val instanceof Object) {
       cleanEmptyBranches(obj[key]);
-      if(!Object.keys(val).length)
+      if (!Object.keys(val).length)
         delete obj[key];
-    }else if(val === undefined /*|| val === null*/)
+    } else if (val === undefined /*|| val === null*/)
       delete obj[key];
   }
   return obj;
 }
 
-export function reverseFilter(filter, state) {
-  const {res: tree, funcs, values} = normalizeFilter2(filter);
+export function reverseFilter(filter, functions, state) {
+  const {res: tree, funcs, values} = normalizeFilter2(filter, functions);
   let res = getValues2({}, '_', tree, state, funcs, values);
   return res instanceof Promise ? res.then(r => cleanEmptyBranches(r)) : cleanEmptyBranches(r);
 }

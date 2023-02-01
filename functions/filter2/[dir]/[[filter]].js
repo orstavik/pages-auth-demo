@@ -1,6 +1,6 @@
 import {appContext3} from "../../APP";
 import {Base64Token} from "../../AES-GCM";
-import {reverseFilter} from "../../ResponseProxy";
+import {reverseFilter} from "../../ResponseProxy2";
 
 const whitelist2 = {
   now: {
@@ -49,16 +49,17 @@ async function produceResponse(state, {SESSION_SECRET}) {
     return cookie;
   }
 
+  const funcs = {
+    "headers.Set-Cookie.id": s => rollSessionCookie(s, SESSION_SECRET),
+    "headers.Set-Cookie": bakeCookies
+  };
   const map = {
     body: "output.body",
     status: "output.status",
     statusText: "output.statusText",
     "headers.Location": "output.Location",
-    // "headers.Set-Cookie.id": ["now", makeSessionCookie],
-    "headers.Set-Cookie.id": ["session", s => rollSessionCookie(s, SESSION_SECRET)],
-    //this will only produce a cookie under specific circumstances
-    "headers.Set-Cookie": bakeCookies
+    "headers.Set-Cookie.id": "session",
   };
 
-  return reverseFilter(map, state);
+  return reverseFilter(map, funcs, state);
 }
