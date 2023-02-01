@@ -1,4 +1,3 @@
-
 function getProp(obj, path) {
   for (let i = 0; obj && i < path.length; i++)
     obj = obj[path[i]];
@@ -26,7 +25,7 @@ function normalizeFilter(filter) {
     });
 }
 
-export function getValues(filter, state) {
+export function reverseFilter(filter, state) {
   const res = {};
   //normalize the sortedFilters
   const sortedFilters = normalizeFilter(filter);
@@ -41,24 +40,20 @@ export function getValues(filter, state) {
     if (process) {
       const list = awaitsMap.get(obj[prop]);
       if (list) {
-        /*val =*/
-        Promise.all(list).then(_ => process(val)).then(v => v !== undefined && /*v !== null &&*/ (obj[prop] = v));
+        Promise.all(list).then(_ => process(val)).then(v => v !== undefined && (obj[prop] = v));
         awaits.push(val);
         continue;
       }
       val = process(val);
     }
     if (val instanceof Promise) {
-      awaits.push(val), val.then(v => v!== undefined && (obj[prop] = v));
-
-      //todo adding the promise under each parent
+      awaits.push(val), val.then(v => v !== undefined && (obj[prop] = v));
       for (let parent of getParents(res, parentPath)) {
         let list = awaitsMap.get(parent);
         !list && awaitsMap.set(parent, list = []);
         list.push(val);
       }
-
-    }else
+    } else
       obj[prop] = val;
   }
   return awaits.length ? Promise.all(awaits).then(_ => res) : res;

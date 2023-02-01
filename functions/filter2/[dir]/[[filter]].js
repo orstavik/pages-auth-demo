@@ -1,6 +1,6 @@
 import {appContext3} from "../../APP";
 import {Base64Token} from "../../AES-GCM";
-import {getValues} from "../../ResponseProxy";
+import {reverseFilter} from "../../ResponseProxy";
 
 const whitelist2 = {
   now: {
@@ -34,7 +34,6 @@ async function produceResponse(state, {SESSION_SECRET}) {
   async function bakeCookies(obj) {
     if (!obj) return;
     await Promise.all(Object.values(obj));
-    console.log(obj);
     return obj ? Object.entries(obj).map(([k, v]) => `${k}${v ? '=' + v.value : ''}`) : undefined;
   }
 
@@ -61,5 +60,5 @@ async function produceResponse(state, {SESSION_SECRET}) {
     "headers.Set-Cookie": bakeCookies
   };
 
-  return getValues(map, state);
+  return reverseFilter(map, state);
 }
