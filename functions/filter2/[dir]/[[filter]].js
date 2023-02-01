@@ -1,5 +1,6 @@
 import {appContext3} from "../../APP";
 import {Base64Token} from "../../AES-GCM";
+import {getValues} from "../../ResponseProxy";
 
 const whitelist2 = {
   now: {
@@ -21,7 +22,9 @@ export async function onRequest(context) {
   let state = proxy.filter(context);
   state instanceof Promise && (state = await state);
 
-  await produceResponse(state, context.env);
+  let resp = await produceResponse(state, context.env);
+  if (resp instanceof Promise) resp = await resp;
+  console.log(JSON.stringify(resp, null, 2));
 
   return new Response(JSON.stringify(state, null, 2));
 }
@@ -29,8 +32,10 @@ export async function onRequest(context) {
 async function produceResponse(state, {SESSION_SECRET}) {
 
   async function bakeCookies(obj) {
+    if (!obj) return;
     await Promise.all(Object.values(obj));
-    return obj ? Object.entries(obj).map(([k, v]) => `${k}=${v.value}`): undefined;
+    console.log(obj);
+    return obj ? Object.entries(obj).map(([k, v]) => `${k}${v ? '=' + v.value : ''}`) : undefined;
   }
 
   async function rollSessionCookie(session, SESSION_SECRET) {
@@ -56,44 +61,5 @@ async function produceResponse(state, {SESSION_SECRET}) {
     "headers.Set-Cookie": bakeCookies
   };
 
-  function getProp(obj, path) {
-    for (let i = 0; obj && i < path.length; i++)
-      obj = obj[path[i]];
-    return obj;
-  }
-
-  function getPropFill(obj, path) {
-    for (let i = 0; i < path.length; i++)
-      obj = obj[path[i]] ??= {};
-    return obj;
-  }
-
-  function getValues(filter, state) {
-    const res = {};
-    //normalize the sortedFilters
-    const sortedFilters = Object.entries(filter)
-      .sort((a, b) => b[0].length - a[0].length)
-      .map(([k, v]) => {
-        const resPath = k.split(".");
-        const prop = resPath.pop();
-        return [[resPath, prop], v instanceof Array ? [v[0].split("."), v[1]] : v instanceof Function ? [, v] : [v.split(".")]];
-      });
-
-    const awaits = [];
-    //this is the task that we need to do when we produce the output. doesn't handle await yet.
-    for (let [[parentPath, prop], [stateP, process]] of sortedFilters) {
-      let val = stateP && getProp(state, stateP);//1. get the value.
-      const obj = getPropFill(res, parentPath);
-      val ??= obj[prop];
-      process && (val = /*here we need a Promise.all and then call process(val)*/process(val));
-      obj[prop] = val;
-      if (val instanceof Promise)
-        awaits.push(val), val.then(v => obj[prop] = v);
-    }
-    return awaits.length ? Promise.all(awaits).then(_ => res) : res;
-  }
-
-  let resp = getValues(map, state);
-  if (resp instanceof Promise) resp = await resp;
-  console.log(JSON.stringify(resp, null, 2));
+  return getValues(map, state);
 }
