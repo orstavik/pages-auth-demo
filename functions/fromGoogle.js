@@ -31,12 +31,11 @@ export async function onRequest(context) {
     context.env.GOOGLE_CODE_LINK,
     context.env.GOOGLE_CLIENT_ID,
     context.env.GOOGLE_REDIRECT,
-    context.env.GOOGLE_CLIENT_SECRET,
-    'authorization_code'      //todo move this inside the getUserData()
+    context.env.GOOGLE_CLIENT_SECRET
   );
 
-  const user = state.now.user = payload.email;              //get the user
-  state.now.rights = state.rights[user];                    //todo redactive filtering?
+  state.now.user = payload.email;                              //get the user
+  state.now.rights = state.rights[state.now.user] ?? null;     //todo redactive filtering?
 
   const base64cookieToken = await Base64Token.encode(context.env.SESSION_SECRET, state.now);
   const response = Response.redirect(new URL("/", state.url));
