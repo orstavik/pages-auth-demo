@@ -85,7 +85,7 @@ async function produceResponse(state, {SESSION_SECRET}) {
       let val = stateP && getProp(state, stateP);//1. get the value.
       const obj = getPropFill(res, parentPath);
       val ??= obj[prop];
-      process && (val = process(val));
+      process && (val = /*here we need a Promise.all and then call process(val)*/process(val));
       obj[prop] = val;
       if (val instanceof Promise)
         awaits.push(val), val.then(v => obj[prop] = v);
